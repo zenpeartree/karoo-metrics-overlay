@@ -4,6 +4,8 @@ A Kotlin Android app for the [Hammerhead Karoo](https://www.hammerhead.io/) bike
 
 The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point any browser or streaming tool to the overlay URL and get real-time cycling metrics composited over your video feed.
 
+**[Download the latest APK](https://github.com/zenpeartree/karoo-metrics-overlay/releases/latest/download/app-release.apk)**
+
 ## Metrics
 
 | Metric | Details |
