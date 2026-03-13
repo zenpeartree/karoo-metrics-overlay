@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karoo Live Metrics</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .overlay {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(0, 0, 0, 0.80);
+    border-radius: 12px;
+    padding: 14px 18px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px 20px;
+    min-width: 380px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .metric {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    position: relative;
+  }
+
+  .metric-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .metric-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+    transition: opacity 0.15s ease;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.5);
+    margin-left: 2px;
+  }
+
+  .metric-value.updated {
+    opacity: 0.7;
+  }
+
+  /* Zone indicator bar */
+  .zone-bar {
+    height: 3px;
+    border-radius: 2px;
+    margin-top: 4px;
+    transition: background-color 0.3s ease, width 0.3s ease;
+    width: 0%;
+  }
+
+  .zone-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+    transition: color 0.3s ease;
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* Grade coloring */
+  .grade-positive { color: #ef4444; }
+  .grade-flat { color: rgba(255,255,255,0.85); }
+  .grade-negative { color: #22d3ee; }
+
+  .status {
+    position: fixed;
+    bottom: 6px;
+    left: 24px;
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.2);
+  }
+  .status.disconnected { color: rgba(255, 80, 80, 0.4); }
+</style>
+</head>
+<body>
+  <div class="overlay">
+    <!-- Row 1 -->
+    <div class="metric">
+      <span class="metric-label">Power</span>
+      <span class="metric-value" id="power">--<span class="metric-unit">W</span></span>
+      <div class="zone-bar" id="power-bar"></div>
+      <span class="zone-label" id="power-zone"></span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Heart Rate</span>
+      <span class="metric-value" id="hr">--<span class="metric-unit">bpm</span></span>
+      <div class="zone-bar" id="hr-bar"></div>
+      <span class="zone-label" id="hr-zone"></span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Grade</span>
+      <span class="metric-value" id="grade">--<span class="metric-unit">%</span></span>
+    </div>
+    <!-- Row 2 -->
+    <div class="metric">
+      <span class="metric-label">Speed</span>
+      <span class="metric-value" id="speed">--<span class="metric-unit">km/h</span></span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Distance</span>
+      <span class="metric-value" id="dist">--<span class="metric-unit">km</span></span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Avg Power</span>
+      <span class="metric-value" id="avgPower">--<span class="metric-unit">W</span></span>
+    </div>
+  </div>
+  <div class="status" id="status"></div>
+
+<script>
+(function() {
+  // === Zone Configuration ===
+  var FTP = 250;
+  var MAX_HR = 187;
+
+  // Power zones (% of FTP)
+  var powerZones = [
+    { name: 'Z1 Recovery',  min: 0,   max: 0.55, color: '#94a3b8' },
+    { name: 'Z2 Endurance', min: 0.55, max: 0.75, color: '#3b82f6' },
+    { name: 'Z3 Tempo',     min: 0.75, max: 0.90, color: '#22c55e' },
+    { name: 'Z4 Threshold', min: 0.90, max: 1.05, color: '#eab308' },
+    { name: 'Z5 VO2max',    min: 1.05, max: 1.20, color: '#f97316' },
+    { name: 'Z6 Anaerobic', min: 1.20, max: 1.50, color: '#ef4444' },
+    { name: 'Z7 Sprint',    min: 1.50, max: 9.99, color: '#a855f7' },
+  ];
+
+  // HR zones (% of max HR)
+  var hrZones = [
+    { name: 'Z1 Recovery',  min: 0,    max: 0.60, color: '#94a3b8' },
+    { name: 'Z2 Aerobic',   min: 0.60, max: 0.70, color: '#3b82f6' },
+    { name: 'Z3 Tempo',     min: 0.70, max: 0.80, color: '#22c55e' },
+    { name: 'Z4 Threshold', min: 0.80, max: 0.90, color: '#eab308' },
+    { name: 'Z5 VO2max',    min: 0.90, max: 1.00, color: '#ef4444' },
+  ];
+
+  function getZone(value, reference, zones) {
+    var pct = value / reference;
+    for (var i = zones.length - 1; i >= 0; i--) {
+      if (pct >= zones[i].min) return zones[i];
+    }
+    return zones[0];
+  }
+
+  function getZoneFill(value, reference, zone) {
+    var pct = value / reference;
+    var range = zone.max - zone.min;
+    if (range <= 0) return 100;
+    var progress = (pct - zone.min) / range;
+    return Math.min(Math.max(progress * 100, 15), 100);
+  }
+
+  var els = {
+    speed: document.getElementById('speed'),
+    power: document.getElementById('power'),
+    hr: document.getElementById('hr'),
+    dist: document.getElementById('dist'),
+    grade: document.getElementById('grade'),
+    avgPower: document.getElementById('avgPower'),
+    powerBar: document.getElementById('power-bar'),
+    powerZone: document.getElementById('power-zone'),
+    hrBar: document.getElementById('hr-bar'),
+    hrZone: document.getElementById('hr-zone'),
+    status: document.getElementById('status'),
+  };
+
+  var ws = null;
+  var reconnectDelay = 2000;
+  var wsFailCount = 0;
+  var pollInterval = null;
+
+  function formatValue(el, value, decimals, unit) {
+    var display = value != null ? (decimals > 0 ? value.toFixed(decimals) : Math.round(value)) : '--';
+    var html = display + '<span class="metric-unit">' + unit + '</span>';
+    if (el.innerHTML !== html) {
+      el.innerHTML = html;
+      el.classList.add('updated');
+      setTimeout(function() { el.classList.remove('updated'); }, 150);
+    }
+  }
+
+  function updateMetrics(data) {
+    formatValue(els.speed, data.speed, 1, 'km/h');
+    formatValue(els.power, data.power, 0, 'W');
+    formatValue(els.hr, data.hr, 0, 'bpm');
+    formatValue(els.dist, data.dist, 1, 'km');
+    formatValue(els.avgPower, data.avgPower, 0, 'W');
+
+    // Grade with color
+    if (data.grade != null) {
+      var g = data.grade;
+      var display = (g >= 0 ? '+' : '') + g.toFixed(1);
+      var cls = g > 0.5 ? 'grade-positive' : (g < -0.5 ? 'grade-negative' : 'grade-flat');
+      els.grade.innerHTML = '<span class="' + cls + '">' + display + '</span><span class="metric-unit">%</span>';
+    } else {
+      els.grade.innerHTML = '--<span class="metric-unit">%</span>';
+    }
+
+    // Power zone
+    if (data.power != null && data.power > 0) {
+      var pz = getZone(data.power, FTP, powerZones);
+      var pFill = getZoneFill(data.power, FTP, pz);
+      els.powerBar.style.backgroundColor = pz.color;
+      els.powerBar.style.width = pFill + '%';
+      els.powerZone.textContent = pz.name;
+      els.powerZone.style.color = pz.color;
+      els.power.style.color = pz.color;
+    } else {
+      els.powerBar.style.width = '0%';
+      els.powerZone.textContent = '';
+      els.power.style.color = '';
+    }
+
+    // HR zone
+    if (data.hr != null && data.hr > 0) {
+      var hz = getZone(data.hr, MAX_HR, hrZones);
+      var hFill = getZoneFill(data.hr, MAX_HR, hz);
+      els.hrBar.style.backgroundColor = hz.color;
+      els.hrBar.style.width = hFill + '%';
+      els.hrZone.textContent = hz.name;
+      els.hrZone.style.color = hz.color;
+      els.hr.style.color = hz.color;
+    } else {
+      els.hrBar.style.width = '0%';
+      els.hrZone.textContent = '';
+      els.hr.style.color = '';
+    }
+  }
+
+  function connectWebSocket() {
+    var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(protocol + '//' + location.host);
+
+    ws.onopen = function() {
+      wsFailCount = 0;
+      reconnectDelay = 2000;
+      els.status.textContent = '';
+      els.status.className = 'status';
+      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+    };
+
+    ws.onmessage = function(event) {
+      try { updateMetrics(JSON.parse(event.data)); } catch(e) {}
+    };
+
+    ws.onclose = function() {
+      ws = null;
+      wsFailCount++;
+      els.status.textContent = 'reconnecting...';
+      els.status.className = 'status disconnected';
+      if (wsFailCount >= 3) {
+        startPolling();
+      } else {
+        setTimeout(connectWebSocket, reconnectDelay);
+        reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+      }
+    };
+
+    ws.onerror = function() { if (ws) ws.close(); };
+  }
+
+  function startPolling() {
+    els.status.textContent = 'polling';
+    if (pollInterval) return;
+    pollInterval = setInterval(function() {
+      fetch('/metrics').then(function(r) { return r.json(); }).then(updateMetrics).catch(function() {});
+    }, 1000);
+    setTimeout(function() { if (!ws) { wsFailCount = 0; connectWebSocket(); } }, 15000);
+  }
+
+  connectWebSocket();
+})();
+</script>
+</body>
+</html>
