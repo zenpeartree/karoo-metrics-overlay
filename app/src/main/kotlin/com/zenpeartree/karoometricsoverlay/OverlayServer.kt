@@ -8,6 +8,7 @@ import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoWSD
 import java.io.IOException
 import java.net.ServerSocket
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.CopyOnWriteArraySet
 
 class OverlayServer(
@@ -88,8 +89,19 @@ class OverlayServer(
 
     private fun loadOverlayHtml() {
         try {
-            overlayHtml = context.assets.open("overlay.html").use { it.readBytes() }
-            Log.i(TAG, "Loaded overlay.html (${overlayHtml?.size} bytes)")
+            val template = context.assets.open("overlay.html").use {
+                it.readBytes().toString(StandardCharsets.UTF_8)
+            }
+            val prefs = context.getSharedPreferences("karoo_overlay_prefs", Context.MODE_PRIVATE)
+            val ftp = prefs.getInt(MainActivity.KEY_FTP, MainActivity.DEFAULT_FTP)
+            val maxHr = prefs.getInt(MainActivity.KEY_MAX_HR, MainActivity.DEFAULT_MAX_HR)
+
+            val injected = template
+                .replace("var FTP = 250;", "var FTP = $ftp;")
+                .replace("var MAX_HR = 187;", "var MAX_HR = $maxHr;")
+
+            overlayHtml = injected.toByteArray(StandardCharsets.UTF_8)
+            Log.i(TAG, "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr")
         } catch (e: IOException) {
             Log.e(TAG, "Failed to load overlay.html", e)
         }

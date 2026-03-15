@@ -4,6 +4,7 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiManager
 import android.os.Build
@@ -24,20 +25,15 @@ class OverlayService : Service() {
             private set
         var isRunning = false
             private set
+        var lastError: String? = null
+            private set
     }
 
-    private lateinit var karooSystem: KarooSystemService
-    private lateinit var metricsCollector: MetricsCollector
-    private lateinit var overlayServer: OverlayServer
+    private var karooSystem: KarooSystemService? = null
+    private var metricsCollector: MetricsCollector? = null
+    private var overlayServer: OverlayServer? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
-
-    override fun onCreate() {
-        super.onCreate()
-        karooSystem = KarooSystemService(this)
-        metricsCollector = MetricsCollector(karooSystem)
-        overlayServer = OverlayServer(this)
-    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -47,26 +43,25 @@ class OverlayService : Service() {
             }
         }
 
+        if (isRunning) {
+            Log.i(TAG, "Service already running, ignoring start")
+            return START_STICKY
+        }
+
+        lastError = null
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Starting..."))
 
-        karooSystem.connect { connected ->
+        val system = KarooSystemService(this)
+        karooSystem = system
+
+        system.connect { connected ->
             if (connected) {
                 Log.i(TAG, "Connected to Karoo System")
-                metricsCollector.start()
-                try {
-                    overlayServer.start()
-                    val addr = getServerAddress()
-                    serverAddress = addr
-                    isRunning = true
-                    updateNotification("Overlay running at $addr")
-                    Log.i(TAG, "=== OBS Overlay available at: $addr ===")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to start overlay server", e)
-                    updateNotification("Failed to start server")
-                }
+                startServer(system)
             } else {
                 Log.w(TAG, "Failed to connect to Karoo System")
+                lastError = "Karoo connection failed"
                 updateNotification("Karoo connection failed")
             }
         }
@@ -74,16 +69,42 @@ class OverlayService : Service() {
         return START_STICKY
     }
 
+    private fun startServer(system: KarooSystemService) {
+        try {
+            val collector = MetricsCollector(system)
+            metricsCollector = collector
+            collector.start()
+
+            val server = OverlayServer(this)
+            overlayServer = server
+            server.start()
+
+            val addr = getServerAddress()
+            serverAddress = addr
+            isRunning = true
+            lastError = null
+            updateNotification("Overlay running at $addr")
+            Log.i(TAG, "=== OBS Overlay available at: $addr ===")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start overlay server", e)
+            lastError = "Server failed: ${e.message}"
+            updateNotification("Failed: ${e.message}")
+        }
+    }
+
     override fun onDestroy() {
         isRunning = false
         serverAddress = null
         try {
-            overlayServer.stop()
+            overlayServer?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "Error stopping server", e)
         }
-        metricsCollector.stop()
-        karooSystem.disconnect()
+        overlayServer = null
+        metricsCollector?.stop()
+        metricsCollector = null
+        karooSystem?.disconnect()
+        karooSystem = null
         super.onDestroy()
     }
 
@@ -120,13 +141,13 @@ class OverlayService : Service() {
     private fun buildNotification(text: String): Notification {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             Notification.Builder(this, CHANNEL_ID)
-                .setContentTitle("Karoo OBS Overlay")
+                .setContentTitle("Karoo Metrics Overlay")
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .build()
         } else {
             Notification.Builder(this)
-                .setContentTitle("Karoo OBS Overlay")
+                .setContentTitle("Karoo Metrics Overlay")
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_media_play)
                 .build()

@@ -51,7 +51,7 @@ class OverlayHtmlTest {
 
     @Test
     fun `overlay contains power zone definitions`() {
-        assertTrue("Missing FTP config", html.contains("var FTP"))
+        assertTrue("Missing FTP config", html.contains("var FTP = 250;"))
         assertTrue("Missing power zones", html.contains("powerZones"))
         assertTrue("Missing Z1", html.contains("Z1"))
         assertTrue("Missing Z7", html.contains("Z7"))
@@ -59,8 +59,15 @@ class OverlayHtmlTest {
 
     @Test
     fun `overlay contains HR zone definitions`() {
-        assertTrue("Missing MAX_HR config", html.contains("var MAX_HR"))
+        assertTrue("Missing MAX_HR config", html.contains("var MAX_HR = 187;"))
         assertTrue("Missing HR zones", html.contains("hrZones"))
+    }
+
+    @Test
+    fun `overlay FTP and MAX_HR use replaceable default format`() {
+        // These exact strings are what OverlayServer.loadOverlayHtml() replaces
+        assertTrue("FTP default must be in replaceable format", html.contains("var FTP = 250;"))
+        assertTrue("MAX_HR default must be in replaceable format", html.contains("var MAX_HR = 187;"))
     }
 
     @Test
