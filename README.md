@@ -2,7 +2,7 @@
 
 A Kotlin Android app for the [Hammerhead Karoo](https://www.hammerhead.io/) bike computer that streams live ride metrics over WiFi as a browser overlay — designed for live streaming with OBS Studio, Streamlabs, or any tool that supports browser sources.
 
-The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point any browser or streaming tool to the overlay URL and get real-time cycling metrics composited over your video feed.
+The app runs a lightweight server directly on the Karoo. Point any browser or streaming tool to the overlay URL and get real-time cycling metrics composited over your video feed.
 
 **[Download the latest APK](https://github.com/zenpeartree/karoo-metrics-overlay/releases/latest/download/app-release.apk)**
 
@@ -10,14 +10,14 @@ The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point an
 
 | Metric | Details |
 |--------|---------|
-| **Power** | Current watts with 7-zone color coding (based on FTP) |
-| **Heart Rate** | Current BPM with 5-zone color coding (based on max HR) |
+| **Power** | Current watts with 7-zone color coding (based on your FTP) |
+| **Heart Rate** | Current BPM with 5-zone color coding (based on your max HR) |
 | **Speed** | Current speed in km/h |
 | **Distance** | Ride distance in km |
 | **Grade** | Current gradient % (color-coded: red uphill, cyan downhill) |
 | **Avg Power** | Ride average power in watts |
 
-### Power Zones (default FTP: 250W)
+### Power Zones
 
 | Zone | Range | Color |
 |------|-------|-------|
@@ -29,7 +29,7 @@ The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point an
 | Z6 Anaerobic | 120–150% | Red |
 | Z7 Sprint | > 150% | Purple |
 
-### Heart Rate Zones (default max HR: 187)
+### Heart Rate Zones
 
 | Zone | Range | Color |
 |------|-------|-------|
@@ -39,7 +39,7 @@ The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point an
 | Z4 Threshold | 80–90% | Yellow |
 | Z5 VO2max | > 90% | Red |
 
-## Getting Started
+## Install
 
 ### Prerequisites
 
@@ -47,7 +47,7 @@ The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point an
 - ADB installed on your computer ([install guide](https://developer.android.com/tools/adb))
 - The Karoo and your streaming device on the **same WiFi network**
 
-### Install from Release
+### Steps
 
 1. Download the latest `app-release.apk` from [Releases](../../releases)
 2. Connect to your Karoo via ADB:
@@ -59,20 +59,23 @@ The app runs a lightweight HTTP/WebSocket server directly on the Karoo. Point an
    adb install app-release.apk
    ```
 
-### Start the Overlay Server
+## Usage
+
+### Configure
 
 1. On the Karoo, open **Karoo Metrics Overlay** from the app drawer
-2. Tap **Start Server**
-3. The app displays the overlay URL (e.g., `http://192.168.1.42:9091/`)
-4. Start a ride — metrics will stream in real time
+2. Enter your **FTP** (watts) and **Max HR** (bpm) — these are used to calculate zones
+3. Tap **Start Server**
+4. The app displays the overlay URL (e.g., `http://192.168.1.42:9091/`)
 
 ### Add to OBS / Streaming Tool
 
 1. In OBS: **Sources → Add → Browser**
-2. Set the URL to the address shown in the app (e.g., `http://192.168.1.42:9091/`)
+2. Set the URL to the address shown in the app
 3. Width: **440**, Height: **180**
 4. Position the overlay in your desired corner
 5. The background is transparent — the video feed shows through
+6. Start a ride on the Karoo — metrics update in real time
 
 ### Mobile Streaming Setup
 
@@ -82,59 +85,6 @@ For fully mobile setups (e.g., streaming from a phone while riding):
 2. Connect the Karoo to the hotspot
 3. Use a streaming app that supports browser sources (e.g., Streamlabs)
 4. Add the overlay URL as a web/browser layer
-
-## Build from Source
-
-### Prerequisites
-
-- JDK 17+
-- Android SDK (API 34)
-- A GitHub personal access token with `read:packages` scope ([create one](https://github.com/settings/tokens))
-
-### Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/zenpeartree/karoo-metrics-overlay.git
-   cd karoo-metrics-overlay
-   ```
-
-2. Add GitHub Packages credentials to `~/.gradle/gradle.properties`:
-   ```properties
-   gpr.user=YOUR_GITHUB_USERNAME
-   gpr.key=YOUR_GITHUB_TOKEN
-   ```
-
-3. Build:
-   ```bash
-   ./gradlew assembleDebug
-   ```
-
-4. Run tests:
-   ```bash
-   ./gradlew testDebugUnitTest
-   ```
-
-The APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
-
-### Customizing Zones
-
-To change FTP or max HR values, edit the zone configuration in [`app/src/main/assets/overlay.html`](app/src/main/assets/overlay.html):
-
-```javascript
-var FTP = 250;    // Change to your FTP
-var MAX_HR = 187; // Change to your max heart rate
-```
-
-## How It Works
-
-The app uses the [karoo-ext](https://github.com/hammerheadnav/karoo-ext) library to subscribe to live sensor data streams from the Karoo. An embedded [NanoHTTPD](https://github.com/NanoHttpd/nanohttpd) server with WebSocket support runs on port 9091, serving:
-
-- `GET /` — The HTML/CSS/JS overlay page (self-contained, no external dependencies)
-- `GET /metrics` — Current metrics as JSON (polling fallback)
-- `WebSocket /` — Real-time metrics pushed every 500ms
-
-The overlay page connects via WebSocket for real-time updates, with automatic reconnection and a polling fallback if the WebSocket connection drops.
 
 ## License
 
