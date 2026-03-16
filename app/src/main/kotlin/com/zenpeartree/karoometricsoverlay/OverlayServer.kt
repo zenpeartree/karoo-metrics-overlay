@@ -7,6 +7,7 @@ import android.util.Log
 import fi.iki.elonen.NanoHTTPD
 import fi.iki.elonen.NanoWSD
 import java.io.IOException
+import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CopyOnWriteArraySet
@@ -35,35 +36,28 @@ class OverlayServer(
     }
 
     init {
-        setServerSocketFactory(ReuseAddrSocketFactory())
+        setServerSocketFactory(ForceBindSocketFactory(DEFAULT_PORT))
     }
 
     override fun start() {
         loadOverlayHtml()
-        // Force stop any lingering server before binding
         try { super.stop() } catch (_: Exception) {}
-        startWithRetry(maxAttempts = 3, delayMs = 500L)
+        super.start()
         startBroadcastLoop()
         Log.i(TAG, "Server started on port $listeningPort")
     }
 
-    private fun startWithRetry(maxAttempts: Int, delayMs: Long) {
-        for (attempt in 1..maxAttempts) {
-            try {
-                super.start()
-                return
-            } catch (e: IOException) {
-                Log.w(TAG, "Start attempt $attempt/$maxAttempts failed: ${e.message}")
-                if (attempt == maxAttempts) throw e
-                try { super.stop() } catch (_: Exception) {}
-                Thread.sleep(delayMs)
-            }
-        }
-    }
-
-    private class ReuseAddrSocketFactory : NanoHTTPD.ServerSocketFactory {
+    /**
+     * Creates a ServerSocket that is already bound with SO_REUSEADDR.
+     * NanoHTTPD skips its own bind() when the socket is already bound,
+     * and SO_REUSEADDR lets us reclaim a port stuck in TIME_WAIT.
+     */
+    private class ForceBindSocketFactory(private val port: Int) : NanoHTTPD.ServerSocketFactory {
         override fun create(): ServerSocket {
-            return ServerSocket().apply { reuseAddress = true }
+            return ServerSocket().apply {
+                reuseAddress = true
+                bind(InetSocketAddress(port))
+            }
         }
     }
 
