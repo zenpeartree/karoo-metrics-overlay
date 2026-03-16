@@ -42,10 +42,23 @@ class OverlayServer(
         loadOverlayHtml()
         // Force stop any lingering server before binding
         try { super.stop() } catch (_: Exception) {}
-        Thread.sleep(200)
-        super.start()
+        startWithRetry(maxAttempts = 3, delayMs = 500L)
         startBroadcastLoop()
         Log.i(TAG, "Server started on port $listeningPort")
+    }
+
+    private fun startWithRetry(maxAttempts: Int, delayMs: Long) {
+        for (attempt in 1..maxAttempts) {
+            try {
+                super.start()
+                return
+            } catch (e: IOException) {
+                Log.w(TAG, "Start attempt $attempt/$maxAttempts failed: ${e.message}")
+                if (attempt == maxAttempts) throw e
+                try { super.stop() } catch (_: Exception) {}
+                Thread.sleep(delayMs)
+            }
+        }
     }
 
     private class ReuseAddrSocketFactory : NanoHTTPD.ServerSocketFactory {

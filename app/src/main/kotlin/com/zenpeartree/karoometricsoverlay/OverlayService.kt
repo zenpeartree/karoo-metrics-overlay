@@ -89,20 +89,25 @@ class OverlayService : Service() {
             Log.e(TAG, "Failed to start overlay server", e)
             lastError = "Server failed: ${e.message}"
             updateNotification("Failed: ${e.message}")
+            // Clean up partial state so a retry is possible
+            metricsCollector?.stop()
+            metricsCollector = null
+            overlayServer = null
+            stopSelf()
         }
     }
 
     override fun onDestroy() {
         isRunning = false
         serverAddress = null
+        metricsCollector?.stop()
+        metricsCollector = null
         try {
             overlayServer?.stop()
         } catch (e: Exception) {
             Log.w(TAG, "Error stopping server", e)
         }
         overlayServer = null
-        metricsCollector?.stop()
-        metricsCollector = null
         karooSystem?.disconnect()
         karooSystem = null
         super.onDestroy()
