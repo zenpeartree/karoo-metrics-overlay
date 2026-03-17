@@ -9,10 +9,12 @@ import fi.iki.elonen.NanoWSD
 import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.ServerSocket
+import java.net.SocketAddress
+import java.nio.channels.ServerSocketChannel
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.CopyOnWriteArraySet
 
-class OverlayServer(
+class OverlayServer private constructor(
     private val context: Context,
     port: Int = DEFAULT_PORT,
 ) : NanoWSD(port) {
@@ -21,12 +23,20 @@ class OverlayServer(
         private const val TAG = "OverlayServer"
         const val DEFAULT_PORT = 9091
         private const val BROADCAST_INTERVAL_MS = 500L
+
+        private var instance: OverlayServer? = null
+
+        @Synchronized
+        fun getInstance(context: Context): OverlayServer {
+            return instance ?: OverlayServer(context.applicationContext).also { instance = it }
+        }
     }
 
     private val clients = CopyOnWriteArraySet<MetricsWebSocket>()
     private var overlayHtml: ByteArray? = null
     private var broadcastThread: HandlerThread? = null
     private var broadcastHandler: Handler? = null
+    private var managedChannel: ServerSocketChannel? = null
 
     private val broadcastRunnable = object : Runnable {
         override fun run() {
@@ -36,35 +46,92 @@ class OverlayServer(
     }
 
     init {
-        setServerSocketFactory(ForceBindSocketFactory(DEFAULT_PORT))
+        setServerSocketFactory(object : NanoHTTPD.ServerSocketFactory {
+            override fun create(): ServerSocket {
+                return createBoundSocket(DEFAULT_PORT)
+            }
+        })
+    }
+
+    /**
+     * Creates a ServerSocket via ServerSocketChannel with SO_REUSEADDR,
+     * pre-bound so NanoHTTPD won't try to bind again.
+     * ServerSocketChannel provides more reliable reuseAddress on Android.
+     */
+    private fun createBoundSocket(port: Int): ServerSocket {
+        closeManagedChannel()
+        val channel = ServerSocketChannel.open()
+        managedChannel = channel
+        val socket = channel.socket()
+        socket.reuseAddress = true
+        socket.bind(InetSocketAddress(port))
+        // Return a wrapper that ignores bind() — NanoHTTPD 2.3.1
+        // calls bind() in ServerRunnable without checking isBound().
+        return object : ServerSocket() {
+            private val delegate = socket
+
+            override fun bind(endpoint: SocketAddress?) = Unit
+            override fun bind(endpoint: SocketAddress?, backlog: Int) = Unit
+            override fun accept() = delegate.accept()
+            override fun close() { delegate.close(); channel.close() }
+            override fun isBound() = delegate.isBound
+            override fun isClosed() = delegate.isClosed
+            override fun getLocalPort() = delegate.localPort
+            override fun getInetAddress() = delegate.inetAddress
+            override fun getLocalSocketAddress() = delegate.localSocketAddress
+            override fun getReuseAddress() = delegate.reuseAddress
+            override fun setReuseAddress(on: Boolean) { delegate.reuseAddress = on }
+            override fun setSoTimeout(timeout: Int) { delegate.soTimeout = timeout }
+            override fun getSoTimeout() = delegate.soTimeout
+            override fun setReceiveBufferSize(size: Int) { delegate.receiveBufferSize = size }
+            override fun getReceiveBufferSize() = delegate.receiveBufferSize
+        }
+    }
+
+    private fun closeManagedChannel() {
+        managedChannel?.let { ch ->
+            try {
+                if (ch.isOpen) {
+                    ch.socket().close()
+                    ch.close()
+                    Log.i(TAG, "Closed previous server channel")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error closing previous channel", e)
+            }
+        }
+        managedChannel = null
     }
 
     override fun start() {
         loadOverlayHtml()
+        // Stop any previous NanoHTTPD state
         try { super.stop() } catch (_: Exception) {}
-        super.start()
-        startBroadcastLoop()
-        Log.i(TAG, "Server started on port $listeningPort")
-    }
+        closeManagedChannel()
 
-    /**
-     * Creates a ServerSocket that is already bound with SO_REUSEADDR.
-     * NanoHTTPD skips its own bind() when the socket is already bound,
-     * and SO_REUSEADDR lets us reclaim a port stuck in TIME_WAIT.
-     */
-    private class ForceBindSocketFactory(private val port: Int) : NanoHTTPD.ServerSocketFactory {
-        override fun create(): ServerSocket {
-            return ServerSocket().apply {
-                reuseAddress = true
-                bind(InetSocketAddress(port))
+        var lastException: IOException? = null
+        for (attempt in 1..5) {
+            try {
+                super.start()
+                startBroadcastLoop()
+                Log.i(TAG, "Server started on port $listeningPort (attempt $attempt)")
+                return
+            } catch (e: IOException) {
+                Log.w(TAG, "Start attempt $attempt/5 failed: ${e.message}")
+                lastException = e
+                try { super.stop() } catch (_: Exception) {}
+                closeManagedChannel()
+                Thread.sleep(1000L * attempt)
             }
         }
+        throw lastException ?: IOException("Failed to start server")
     }
 
     override fun stop() {
         stopBroadcastLoop()
         clients.clear()
         super.stop()
+        closeManagedChannel()
         Log.i(TAG, "Server stopped")
     }
 

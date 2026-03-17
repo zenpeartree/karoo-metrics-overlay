@@ -75,7 +75,7 @@ class OverlayService : Service() {
             metricsCollector = collector
             collector.start()
 
-            val server = OverlayServer(this)
+            val server = OverlayServer.getInstance(this)
             overlayServer = server
             server.start()
 
