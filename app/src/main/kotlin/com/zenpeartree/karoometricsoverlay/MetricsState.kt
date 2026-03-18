@@ -9,6 +9,8 @@ data class MetricsSnapshot(
     val distance: Double? = null,
     val grade: Double? = null,
     val avgPower: Int? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
     val timestamp: Long = System.currentTimeMillis(),
 ) {
     fun toJson(): String {
@@ -18,7 +20,9 @@ data class MetricsSnapshot(
         val d = distance?.let { "%.1f".format(it) } ?: "null"
         val g = grade?.let { "%.1f".format(it) } ?: "null"
         val ap = avgPower?.toString() ?: "null"
-        return """{"speed":$s,"power":$p,"hr":$hr,"dist":$d,"grade":$g,"avgPower":$ap,"ts":$timestamp}"""
+        val la = lat?.let { "%.6f".format(it) } ?: "null"
+        val ln = lng?.let { "%.6f".format(it) } ?: "null"
+        return """{"speed":$s,"power":$p,"hr":$hr,"dist":$d,"grade":$g,"avgPower":$ap,"lat":$la,"lng":$ln,"ts":$timestamp}"""
     }
 }
 
@@ -49,5 +53,9 @@ object MetricsState {
 
     fun updateAvgPower(value: Int) {
         ref.updateAndGet { it.copy(avgPower = value, timestamp = System.currentTimeMillis()) }
+    }
+
+    fun updateLocation(lat: Double, lng: Double) {
+        ref.updateAndGet { it.copy(lat = lat, lng = lng, timestamp = System.currentTimeMillis()) }
     }
 }

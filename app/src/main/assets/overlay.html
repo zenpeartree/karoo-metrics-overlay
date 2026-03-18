@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Karoo Live Metrics</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -14,10 +16,30 @@
     overflow: hidden;
   }
 
-  .overlay {
+  .overlay-container {
     position: fixed;
     bottom: 20px;
     left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .map-container {
+    width: 380px;
+    height: 240px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    position: relative;
+    display: none;
+  }
+  .map-container.visible { display: block; }
+  .map-container .leaflet-control-attribution { display: none; }
+  .map-container .leaflet-control-zoom { display: none; }
+
+  .metrics {
     background: rgba(0, 0, 0, 0.80);
     border-radius: 12px;
     padding: 14px 18px 12px;
@@ -63,7 +85,6 @@
     opacity: 0.7;
   }
 
-  /* Zone indicator bar */
   .zone-bar {
     height: 3px;
     border-radius: 2px;
@@ -81,7 +102,6 @@
     color: rgba(255,255,255,0.3);
   }
 
-  /* Grade coloring */
   .grade-positive { color: #ef4444; }
   .grade-flat { color: rgba(255,255,255,0.85); }
   .grade-negative { color: #22d3ee; }
@@ -94,39 +114,58 @@
     color: rgba(255, 255, 255, 0.2);
   }
   .status.disconnected { color: rgba(255, 80, 80, 0.4); }
+
+  .rider-dot {
+    width: 14px;
+    height: 14px;
+    background: #22c55e;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+    50% { box-shadow: 0 0 16px rgba(34, 197, 94, 0.9); }
+  }
 </style>
 </head>
 <body>
-  <div class="overlay">
-    <!-- Row 1 -->
-    <div class="metric">
-      <span class="metric-label">Power</span>
-      <span class="metric-value" id="power">--<span class="metric-unit">W</span></span>
-      <div class="zone-bar" id="power-bar"></div>
-      <span class="zone-label" id="power-zone"></span>
+  <div class="overlay-container">
+    <div class="map-container" id="map-container">
+      <div id="map" style="width:100%;height:100%;"></div>
     </div>
-    <div class="metric">
-      <span class="metric-label">Heart Rate</span>
-      <span class="metric-value" id="hr">--<span class="metric-unit">bpm</span></span>
-      <div class="zone-bar" id="hr-bar"></div>
-      <span class="zone-label" id="hr-zone"></span>
-    </div>
-    <div class="metric">
-      <span class="metric-label">Grade</span>
-      <span class="metric-value" id="grade">--<span class="metric-unit">%</span></span>
-    </div>
-    <!-- Row 2 -->
-    <div class="metric">
-      <span class="metric-label">Speed</span>
-      <span class="metric-value" id="speed">--<span class="metric-unit">km/h</span></span>
-    </div>
-    <div class="metric">
-      <span class="metric-label">Distance</span>
-      <span class="metric-value" id="dist">--<span class="metric-unit">km</span></span>
-    </div>
-    <div class="metric">
-      <span class="metric-label">Avg Power</span>
-      <span class="metric-value" id="avgPower">--<span class="metric-unit">W</span></span>
+    <div class="metrics">
+      <!-- Row 1 -->
+      <div class="metric">
+        <span class="metric-label">Power</span>
+        <span class="metric-value" id="power">--<span class="metric-unit">W</span></span>
+        <div class="zone-bar" id="power-bar"></div>
+        <span class="zone-label" id="power-zone"></span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Heart Rate</span>
+        <span class="metric-value" id="hr">--<span class="metric-unit">bpm</span></span>
+        <div class="zone-bar" id="hr-bar"></div>
+        <span class="zone-label" id="hr-zone"></span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Grade</span>
+        <span class="metric-value" id="grade">--<span class="metric-unit">%</span></span>
+      </div>
+      <!-- Row 2 -->
+      <div class="metric">
+        <span class="metric-label">Speed</span>
+        <span class="metric-value" id="speed">--<span class="metric-unit">km/h</span></span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Distance</span>
+        <span class="metric-value" id="dist">--<span class="metric-unit">km</span></span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Avg Power</span>
+        <span class="metric-value" id="avgPower">--<span class="metric-unit">W</span></span>
+      </div>
     </div>
   </div>
   <div class="status" id="status"></div>
@@ -137,7 +176,6 @@
   var FTP = 250;
   var MAX_HR = 187;
 
-  // Power zones (% of FTP)
   var powerZones = [
     { name: 'Z1 Recovery',  min: 0,   max: 0.55, color: '#94a3b8' },
     { name: 'Z2 Endurance', min: 0.55, max: 0.75, color: '#3b82f6' },
@@ -148,7 +186,6 @@
     { name: 'Z7 Sprint',    min: 1.50, max: 9.99, color: '#a855f7' },
   ];
 
-  // HR zones (% of max HR)
   var hrZones = [
     { name: 'Z1 Recovery',  min: 0,    max: 0.60, color: '#94a3b8' },
     { name: 'Z2 Aerobic',   min: 0.60, max: 0.70, color: '#3b82f6' },
@@ -185,8 +222,67 @@
     hrBar: document.getElementById('hr-bar'),
     hrZone: document.getElementById('hr-zone'),
     status: document.getElementById('status'),
+    mapContainer: document.getElementById('map-container'),
   };
 
+  // === Map setup ===
+  var map = null;
+  var riderMarker = null;
+  var routeTrail = null;
+  var trailPoints = [];
+  var mapReady = false;
+
+  function initMap(lat, lng) {
+    if (mapReady) return;
+    els.mapContainer.classList.add('visible');
+
+    map = L.map('map', {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+    }).setView([lat, lng], 11);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+    }).addTo(map);
+
+    routeTrail = L.polyline([], {
+      color: '#22c55e',
+      weight: 3,
+      opacity: 0.7,
+    }).addTo(map);
+
+    var riderIcon = L.divIcon({
+      className: '',
+      html: '<div class="rider-dot"></div>',
+      iconSize: [14, 14],
+      iconAnchor: [7, 7],
+    });
+    riderMarker = L.marker([lat, lng], { icon: riderIcon }).addTo(map);
+
+    mapReady = true;
+  }
+
+  function updateMap(lat, lng) {
+    if (!lat || !lng) return;
+    if (!mapReady) { initMap(lat, lng); return; }
+
+    var pos = [lat, lng];
+    riderMarker.setLatLng(pos);
+    map.panTo(pos, { animate: true, duration: 1 });
+
+    // Add point to trail (skip if too close to last point)
+    var last = trailPoints[trailPoints.length - 1];
+    if (!last || Math.abs(last[0] - lat) > 0.00005 || Math.abs(last[1] - lng) > 0.00005) {
+      trailPoints.push(pos);
+      routeTrail.setLatLngs(trailPoints);
+    }
+  }
+
+  // === Metrics ===
   var ws = null;
   var reconnectDelay = 2000;
   var wsFailCount = 0;
@@ -248,6 +344,9 @@
       els.hrZone.textContent = '';
       els.hr.style.color = '';
     }
+
+    // Map
+    updateMap(data.lat, data.lng);
   }
 
   function connectWebSocket() {

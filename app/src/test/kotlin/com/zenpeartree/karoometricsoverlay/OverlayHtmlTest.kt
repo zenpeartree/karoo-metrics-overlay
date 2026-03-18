@@ -93,9 +93,17 @@ class OverlayHtmlTest {
     }
 
     @Test
-    fun `overlay is self-contained with no external dependencies`() {
-        // No CDN links or external script/css references
-        assertTrue("Should not have external scripts", !html.contains("src=\"http"))
-        assertTrue("Should not have external stylesheets", !html.contains("href=\"http"))
+    fun `overlay includes Leaflet for map rendering`() {
+        assertTrue("Should include Leaflet CSS", html.contains("leaflet"))
+        assertTrue("Should include map container", html.contains("id=\"map-container\""))
+        assertTrue("Should include map element", html.contains("id=\"map\""))
+    }
+
+    @Test
+    fun `overlay contains map initialization code`() {
+        assertTrue("Should have initMap function", html.contains("function initMap"))
+        assertTrue("Should have updateMap function", html.contains("function updateMap"))
+        assertTrue("Should have rider marker", html.contains("riderMarker"))
+        assertTrue("Should have route trail", html.contains("routeTrail"))
     }
 }

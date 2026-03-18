@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karoo Metrics Overlay — Mockup</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: url('https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=1920&q=80') center/cover no-repeat;
+    font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .overlay-container {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .metrics {
+    background: rgba(0, 0, 0, 0.80);
+    border-radius: 12px;
+    padding: 14px 18px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px 20px;
+    min-width: 380px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .metric {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .metric-label {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.45);
+  }
+
+  .metric-value {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-unit {
+    font-size: 12px;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.5);
+    margin-left: 2px;
+  }
+
+  .zone-bar {
+    height: 3px;
+    border-radius: 2px;
+    margin-top: 4px;
+    transition: background-color 0.3s ease, width 0.3s ease;
+  }
+
+  .zone-label {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .grade-positive { color: #ef4444; }
+
+  .map-container {
+    width: 380px;
+    height: 240px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px);
+    position: relative;
+  }
+
+  /* Map theme override */
+  .map-container .leaflet-control-attribution {
+    display: none;
+  }
+  .map-container .leaflet-control-zoom {
+    display: none;
+  }
+
+  /* Pulsing dot for current position */
+  .rider-dot {
+    width: 14px;
+    height: 14px;
+    background: #22c55e;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
+    50% { box-shadow: 0 0 16px rgba(34, 197, 94, 0.9); }
+  }
+</style>
+</head>
+<body>
+
+<div class="overlay-container">
+  <div class="map-container" id="map"></div>
+  <div class="metrics">
+    <!-- Row 1 -->
+    <div class="metric">
+      <span class="metric-label">Power</span>
+      <span class="metric-value" style="color: #eab308;">247<span class="metric-unit">W</span></span>
+      <div class="zone-bar" style="background-color: #eab308; width: 85%;"></div>
+      <span class="zone-label" style="color: #eab308;">Z4 Threshold</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Heart Rate</span>
+      <span class="metric-value" style="color: #22c55e;">156<span class="metric-unit">bpm</span></span>
+      <div class="zone-bar" style="background-color: #22c55e; width: 60%;"></div>
+      <span class="zone-label" style="color: #22c55e;">Z3 Tempo</span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Grade</span>
+      <span class="metric-value"><span class="grade-positive">+4.2</span><span class="metric-unit">%</span></span>
+    </div>
+    <!-- Row 2 -->
+    <div class="metric">
+      <span class="metric-label">Speed</span>
+      <span class="metric-value">28.4<span class="metric-unit">km/h</span></span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Distance</span>
+      <span class="metric-value">42.7<span class="metric-unit">km</span></span>
+    </div>
+    <div class="metric">
+      <span class="metric-label">Avg Power</span>
+      <span class="metric-value">218<span class="metric-unit">W</span></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Simulated route near Samora Correia
+// Sintra — Cabo da Roca road
+var routePoints = [
+  [38.7870, -9.3900], [38.7865, -9.3920], [38.7858, -9.3942],
+  [38.7850, -9.3960], [38.7842, -9.3980], [38.7835, -9.4000],
+  [38.7828, -9.4018], [38.7820, -9.4038], [38.7812, -9.4055],
+  [38.7805, -9.4075], [38.7798, -9.4095], [38.7790, -9.4112],
+  [38.7782, -9.4130], [38.7775, -9.4148], [38.7768, -9.4168],
+  [38.7760, -9.4185], [38.7752, -9.4202], [38.7745, -9.4220],
+  [38.7738, -9.4238], [38.7730, -9.4255], [38.7722, -9.4272],
+  [38.7715, -9.4290], [38.7708, -9.4308], [38.7700, -9.4325],
+];
+
+var currentIndex = 14;
+
+var map = L.map('map', {
+  zoomControl: false,
+  attributionControl: false,
+  dragging: false,
+  scrollWheelZoom: false,
+  doubleClickZoom: false,
+  touchZoom: false,
+}).setView(routePoints[currentIndex], 11);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+}).addTo(map);
+
+// Route trail (past)
+var pastTrail = L.polyline(routePoints.slice(0, currentIndex + 1), {
+  color: '#22c55e',
+  weight: 3,
+  opacity: 0.7,
+}).addTo(map);
+
+// Route trail (faded future for demo)
+var futureTrail = L.polyline(routePoints.slice(currentIndex), {
+  color: '#22c55e',
+  weight: 2,
+  opacity: 0.2,
+  dashArray: '6, 8',
+}).addTo(map);
+
+// Rider dot
+var riderIcon = L.divIcon({
+  className: '',
+  html: '<div class="rider-dot"></div>',
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+var riderMarker = L.marker(routePoints[currentIndex], { icon: riderIcon }).addTo(map);
+
+// Animate the rider moving along the route
+setInterval(function() {
+  currentIndex++;
+  if (currentIndex >= routePoints.length) currentIndex = 0;
+
+  var pos = routePoints[currentIndex];
+  riderMarker.setLatLng(pos);
+  map.panTo(pos, { animate: true, duration: 1.5 });
+  pastTrail.setLatLngs(routePoints.slice(0, currentIndex + 1));
+}, 2000);
+</script>
+</body>
+</html>

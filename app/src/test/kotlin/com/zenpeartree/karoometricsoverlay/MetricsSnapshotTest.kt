@@ -18,6 +18,8 @@ class MetricsSnapshotTest {
         assertTrue(json.isNull("dist"))
         assertTrue(json.isNull("grade"))
         assertTrue(json.isNull("avgPower"))
+        assertTrue(json.isNull("lat"))
+        assertTrue(json.isNull("lng"))
         assertEquals(1000L, json.getLong("ts"))
     }
 
@@ -30,6 +32,8 @@ class MetricsSnapshotTest {
             distance = 42.3,
             grade = 5.7,
             avgPower = 210,
+            lat = 38.7870,
+            lng = -9.3900,
             timestamp = 2000L,
         )
         val json = JSONObject(snapshot.toJson())
@@ -40,6 +44,8 @@ class MetricsSnapshotTest {
         assertEquals(42.3, json.getDouble("dist"), 0.1)
         assertEquals(5.7, json.getDouble("grade"), 0.1)
         assertEquals(210, json.getInt("avgPower"))
+        assertEquals(38.787, json.getDouble("lat"), 0.001)
+        assertEquals(-9.39, json.getDouble("lng"), 0.001)
         assertEquals(2000L, json.getLong("ts"))
     }
 
@@ -96,6 +102,16 @@ class MetricsSnapshotTest {
         assertTrue(json.isNull("dist"))
         assertTrue(json.isNull("grade"))
         assertTrue(json.isNull("avgPower"))
+        assertTrue(json.isNull("lat"))
+        assertTrue(json.isNull("lng"))
+    }
+
+    @Test
+    fun `toJson formats lat lng to six decimal places`() {
+        val snapshot = MetricsSnapshot(lat = 38.787012345, lng = -9.390067890, timestamp = 0L)
+        val json = JSONObject(snapshot.toJson())
+        assertEquals(38.787012, json.getDouble("lat"), 0.000001)
+        assertEquals(-9.390068, json.getDouble("lng"), 0.000001)
     }
 
     @Test
@@ -135,6 +151,8 @@ class MetricsSnapshotTest {
         assertEquals(null, snapshot.distance)
         assertEquals(null, snapshot.grade)
         assertEquals(null, snapshot.avgPower)
+        assertEquals(null, snapshot.lat)
+        assertEquals(null, snapshot.lng)
     }
 
     @Test

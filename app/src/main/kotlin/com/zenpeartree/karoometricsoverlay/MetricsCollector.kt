@@ -23,6 +23,7 @@ class MetricsCollector(private val karooSystem: KarooSystemService) {
         subscribeDistance()
         subscribeGrade()
         subscribeAvgPower()
+        subscribeLocation()
         Log.i(TAG, "Started collecting metrics (${consumerIds.size} consumers)")
     }
 
@@ -135,6 +136,25 @@ class MetricsCollector(private val karooSystem: KarooSystemService) {
                     }
                 }
                 else -> Log.d(TAG, "Avg power stream state: $state")
+            }
+        }
+        consumerIds.add(id)
+    }
+
+    private fun subscribeLocation() {
+        val id = karooSystem.addConsumer(
+            OnStreamState.StartStreaming(DataType.Type.LOCATION),
+            onError = { Log.w(TAG, "Location stream error: $it") },
+        ) { event: OnStreamState ->
+            when (val state = event.state) {
+                is StreamState.Streaming -> {
+                    val lat = state.dataPoint.values[DataType.Field.LOC_LATITUDE]
+                    val lng = state.dataPoint.values[DataType.Field.LOC_LONGITUDE]
+                    if (lat != null && lng != null) {
+                        MetricsState.updateLocation(lat, lng)
+                    }
+                }
+                else -> Log.d(TAG, "Location stream state: $state")
             }
         }
         consumerIds.add(id)

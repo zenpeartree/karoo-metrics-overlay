@@ -22,6 +22,7 @@ class MetricsStateTest {
         MetricsState.updateDistance(0.0)
         MetricsState.updateGrade(0.0)
         MetricsState.updateAvgPower(0)
+        MetricsState.updateLocation(0.0, 0.0)
     }
 
     @Test
@@ -58,6 +59,14 @@ class MetricsStateTest {
     fun `updateAvgPower updates avgPower field`() {
         MetricsState.updateAvgPower(210)
         assertEquals(210, MetricsState.get().avgPower)
+    }
+
+    @Test
+    fun `updateLocation updates lat and lng fields`() {
+        MetricsState.updateLocation(38.787, -9.39)
+        val snapshot = MetricsState.get()
+        assertEquals(38.787, snapshot.lat!!, 0.001)
+        assertEquals(-9.39, snapshot.lng!!, 0.001)
     }
 
     @Test
