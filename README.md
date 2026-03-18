@@ -6,6 +6,10 @@ The app runs a lightweight server directly on the Karoo. Point any browser or st
 
 **[Download the latest APK](https://github.com/zenpeartree/karoo-metrics-overlay/releases/latest/download/app-release.apk)**
 
+## Screenshot
+
+<img width="378" height="388" alt="image" src="https://github.com/user-attachments/assets/726a17fa-6cb4-4eed-8f74-a693b1c27098" />
+
 ## Metrics
 
 | Metric | Details |
