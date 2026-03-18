@@ -14,15 +14,7 @@ class MetricsStateTest {
 
     @Before
     fun reset() {
-        // Reset state by updating all fields to null via a fresh snapshot
-        // MetricsState is a singleton, so we reset by overwriting each field
-        MetricsState.updateSpeed(0.0)
-        MetricsState.updatePower(0)
-        MetricsState.updateHeartRate(0)
-        MetricsState.updateDistance(0.0)
-        MetricsState.updateGrade(0.0)
-        MetricsState.updateAvgPower(0)
-        MetricsState.updateLocation(0.0, 0.0)
+        MetricsState.reset()
     }
 
     @Test
@@ -110,6 +102,25 @@ class MetricsStateTest {
         assertNotNull(snapshot.distance)
         assertNotNull(snapshot.grade)
         assertNotNull(snapshot.avgPower)
+    }
+
+    @Test
+    fun `reset clears all metric fields`() {
+        MetricsState.updateSpeed(25.0)
+        MetricsState.updatePower(180)
+        MetricsState.updateLocation(38.787, -9.39)
+
+        MetricsState.reset()
+
+        val snapshot = MetricsState.get()
+        assertNull(snapshot.speed)
+        assertNull(snapshot.power)
+        assertNull(snapshot.heartRate)
+        assertNull(snapshot.distance)
+        assertNull(snapshot.grade)
+        assertNull(snapshot.avgPower)
+        assertNull(snapshot.lat)
+        assertNull(snapshot.lng)
     }
 
     @Test

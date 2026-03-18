@@ -4,6 +4,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 class MetricsSnapshotTest {
 
@@ -164,5 +165,18 @@ class MetricsSnapshotTest {
         assertEquals(250, updated.power)
         assertEquals(150, updated.heartRate)
         assertEquals(200L, updated.timestamp)
+    }
+
+    @Test
+    fun `toJson uses locale independent decimal formatting`() {
+        val originalLocale = Locale.getDefault()
+        Locale.setDefault(Locale.GERMANY)
+        try {
+            val json = JSONObject(MetricsSnapshot(speed = 32.5, grade = 4.2, timestamp = 0L).toJson())
+            assertEquals(32.5, json.getDouble("speed"), 0.01)
+            assertEquals(4.2, json.getDouble("grade"), 0.01)
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 }

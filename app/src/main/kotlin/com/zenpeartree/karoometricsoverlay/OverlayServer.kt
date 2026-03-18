@@ -169,13 +169,21 @@ class OverlayServer private constructor(
             val prefs = context.getSharedPreferences("karoo_overlay_prefs", Context.MODE_PRIVATE)
             val ftp = prefs.getInt(MainActivity.KEY_FTP, MainActivity.DEFAULT_FTP)
             val maxHr = prefs.getInt(MainActivity.KEY_MAX_HR, MainActivity.DEFAULT_MAX_HR)
+            val shareLocation = prefs.getBoolean(
+                MainActivity.KEY_SHARE_LOCATION,
+                MainActivity.DEFAULT_SHARE_LOCATION,
+            )
 
             val injected = template
                 .replace("var FTP = 250;", "var FTP = $ftp;")
                 .replace("var MAX_HR = 187;", "var MAX_HR = $maxHr;")
+                .replace("var SHOW_MAP = false;", "var SHOW_MAP = $shareLocation;")
 
             overlayHtml = injected.toByteArray(StandardCharsets.UTF_8)
-            Log.i(TAG, "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr")
+            Log.i(
+                TAG,
+                "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr, SHOW_MAP=$shareLocation",
+            )
         } catch (e: IOException) {
             Log.e(TAG, "Failed to load overlay.html", e)
         }

@@ -175,6 +175,7 @@
   // === Zone Configuration ===
   var FTP = 250;
   var MAX_HR = 187;
+  var SHOW_MAP = false;
 
   var powerZones = [
     { name: 'Z1 Recovery',  min: 0,   max: 0.55, color: '#94a3b8' },
@@ -232,7 +233,13 @@
   var trailPoints = [];
   var mapReady = false;
 
+  if (!SHOW_MAP && els.mapContainer && els.mapContainer.parentNode) {
+    els.mapContainer.parentNode.removeChild(els.mapContainer);
+    els.mapContainer = null;
+  }
+
   function initMap(lat, lng) {
+    if (!SHOW_MAP || !els.mapContainer) return;
     if (mapReady) return;
     els.mapContainer.classList.add('visible');
 
@@ -267,7 +274,7 @@
   }
 
   function updateMap(lat, lng) {
-    if (!lat || !lng) return;
+    if (!SHOW_MAP || lat == null || lng == null) return;
     if (!mapReady) { initMap(lat, lng); return; }
 
     var pos = [lat, lng];
@@ -346,7 +353,9 @@
     }
 
     // Map
-    updateMap(data.lat, data.lng);
+    if (SHOW_MAP) {
+      updateMap(data.lat, data.lng);
+    }
   }
 
   function connectWebSocket() {

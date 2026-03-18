@@ -3,6 +3,12 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+val releaseKeystoreFile = file("../release.keystore")
+val releaseStorePassword = providers.gradleProperty("KEYSTORE_PASSWORD")
+    .orElse(providers.environmentVariable("KEYSTORE_PASSWORD"))
+    .orNull
+val hasReleaseSigning = releaseKeystoreFile.exists() && !releaseStorePassword.isNullOrBlank()
+
 android {
     namespace = "com.zenpeartree.karoometricsoverlay"
     compileSdk = 34
@@ -11,25 +17,27 @@ android {
         applicationId = "com.zenpeartree.karoometricsoverlay"
         minSdk = 23
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.1.1"
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file("../release.keystore")
-            storePassword = providers.gradleProperty("KEYSTORE_PASSWORD")
-                .orElse(providers.environmentVariable("KEYSTORE_PASSWORD"))
-                .get()
-            keyAlias = "karoo-metrics"
-            keyPassword = storePassword
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = releaseKeystoreFile
+                storePassword = releaseStorePassword
+                keyAlias = "karoo-metrics"
+                keyPassword = releaseStorePassword
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -50,4 +58,8 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20231013")
+}
+
+if (!hasReleaseSigning) {
+    logger.lifecycle("Release signing disabled: missing ../release.keystore or KEYSTORE_PASSWORD.")
 }

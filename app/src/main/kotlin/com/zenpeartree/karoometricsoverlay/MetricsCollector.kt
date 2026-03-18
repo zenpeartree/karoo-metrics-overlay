@@ -6,7 +6,10 @@ import io.hammerhead.karooext.models.DataType
 import io.hammerhead.karooext.models.OnStreamState
 import io.hammerhead.karooext.models.StreamState
 
-class MetricsCollector(private val karooSystem: KarooSystemService) {
+class MetricsCollector(
+    private val karooSystem: KarooSystemService,
+    private val shareLocation: Boolean,
+) {
 
     companion object {
         private const val TAG = "MetricsCollector"
@@ -23,7 +26,9 @@ class MetricsCollector(private val karooSystem: KarooSystemService) {
         subscribeDistance()
         subscribeGrade()
         subscribeAvgPower()
-        subscribeLocation()
+        if (shareLocation) {
+            subscribeLocation()
+        }
         Log.i(TAG, "Started collecting metrics (${consumerIds.size} consumers)")
     }
 

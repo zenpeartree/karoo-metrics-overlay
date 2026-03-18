@@ -68,6 +68,7 @@ class OverlayHtmlTest {
         // These exact strings are what OverlayServer.loadOverlayHtml() replaces
         assertTrue("FTP default must be in replaceable format", html.contains("var FTP = 250;"))
         assertTrue("MAX_HR default must be in replaceable format", html.contains("var MAX_HR = 187;"))
+        assertTrue("SHOW_MAP default must be in replaceable format", html.contains("var SHOW_MAP = false;"))
     }
 
     @Test
@@ -105,5 +106,13 @@ class OverlayHtmlTest {
         assertTrue("Should have updateMap function", html.contains("function updateMap"))
         assertTrue("Should have rider marker", html.contains("riderMarker"))
         assertTrue("Should have route trail", html.contains("routeTrail"))
+    }
+
+    @Test
+    fun `overlay treats zero coordinates as valid`() {
+        assertTrue(
+            "Map update should allow zero coordinates",
+            html.contains("lat == null || lng == null"),
+        )
     }
 }

@@ -24,6 +24,19 @@ class SettingsTest {
             "FTP and MAX_HR keys must be different",
             MainActivity.KEY_FTP != MainActivity.KEY_MAX_HR,
         )
+        assertTrue(
+            "Location sharing key must be different from FTP key",
+            MainActivity.KEY_SHARE_LOCATION != MainActivity.KEY_FTP,
+        )
+        assertTrue(
+            "Location sharing key must be different from MAX_HR key",
+            MainActivity.KEY_SHARE_LOCATION != MainActivity.KEY_MAX_HR,
+        )
+    }
+
+    @Test
+    fun `location sharing defaults to disabled`() {
+        assertEquals(false, MainActivity.DEFAULT_SHARE_LOCATION)
     }
 
     @Test
@@ -41,6 +54,15 @@ class SettingsTest {
         assertTrue(
             "overlay.html default MAX_HR (187) should be present for replacement",
             html.contains("var MAX_HR = 187;"),
+        )
+    }
+
+    @Test
+    fun `overlay html default SHOW_MAP matches location sharing default`() {
+        val html = java.io.File("src/main/assets/overlay.html").readText()
+        assertTrue(
+            "overlay.html default SHOW_MAP should be present for replacement",
+            html.contains("var SHOW_MAP = false;"),
         )
     }
 }

@@ -12,6 +12,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -23,8 +24,10 @@ class MainActivity : Activity() {
         private const val PREFS_NAME = "karoo_overlay_prefs"
         const val KEY_FTP = "ftp"
         const val KEY_MAX_HR = "max_hr"
+        const val KEY_SHARE_LOCATION = "share_location"
         const val DEFAULT_FTP = 200
         const val DEFAULT_MAX_HR = 190
+        const val DEFAULT_SHARE_LOCATION = false
     }
 
     private lateinit var prefs: SharedPreferences
@@ -34,6 +37,7 @@ class MainActivity : Activity() {
     private lateinit var toggleButton: Button
     private lateinit var ftpInput: EditText
     private lateinit var maxHrInput: EditText
+    private lateinit var shareLocationInput: CheckBox
     private val handler = Handler(Looper.getMainLooper())
 
     private val uiUpdater = object : Runnable {
@@ -114,6 +118,13 @@ class MainActivity : Activity() {
         hrRow.addView(maxHrInput)
         layout.addView(hrRow)
 
+        shareLocationInput = CheckBox(this).apply {
+            text = "Share live location with the browser overlay (shows map)"
+            isChecked = prefs.getBoolean(KEY_SHARE_LOCATION, DEFAULT_SHARE_LOCATION)
+            setPadding(0, 16, 0, 0)
+        }
+        layout.addView(shareLocationInput)
+
         // --- Status ---
         statusText = TextView(this).apply {
             text = "Stopped"
@@ -175,6 +186,7 @@ class MainActivity : Activity() {
         prefs.edit()
             .putInt(KEY_FTP, ftp)
             .putInt(KEY_MAX_HR, maxHr)
+            .putBoolean(KEY_SHARE_LOCATION, shareLocationInput.isChecked)
             .apply()
     }
 
@@ -204,6 +216,7 @@ class MainActivity : Activity() {
             errorText.text = ""
             ftpInput.isEnabled = false
             maxHrInput.isEnabled = false
+            shareLocationInput.isEnabled = false
         } else {
             statusText.text = "Stopped"
             addressText.text = ""
@@ -211,6 +224,7 @@ class MainActivity : Activity() {
             errorText.text = OverlayService.lastError ?: ""
             ftpInput.isEnabled = true
             maxHrInput.isEnabled = true
+            shareLocationInput.isEnabled = true
         }
     }
 }

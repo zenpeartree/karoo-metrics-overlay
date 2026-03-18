@@ -1,6 +1,7 @@
 package com.zenpeartree.karoometricsoverlay
 
 import java.util.concurrent.atomic.AtomicReference
+import java.util.Locale
 
 data class MetricsSnapshot(
     val speed: Double? = null,
@@ -14,14 +15,14 @@ data class MetricsSnapshot(
     val timestamp: Long = System.currentTimeMillis(),
 ) {
     fun toJson(): String {
-        val s = speed?.let { "%.1f".format(it) } ?: "null"
+        val s = speed?.let { String.format(Locale.US, "%.1f", it) } ?: "null"
         val p = power?.toString() ?: "null"
         val hr = heartRate?.toString() ?: "null"
-        val d = distance?.let { "%.1f".format(it) } ?: "null"
-        val g = grade?.let { "%.1f".format(it) } ?: "null"
+        val d = distance?.let { String.format(Locale.US, "%.1f", it) } ?: "null"
+        val g = grade?.let { String.format(Locale.US, "%.1f", it) } ?: "null"
         val ap = avgPower?.toString() ?: "null"
-        val la = lat?.let { "%.6f".format(it) } ?: "null"
-        val ln = lng?.let { "%.6f".format(it) } ?: "null"
+        val la = lat?.let { String.format(Locale.US, "%.6f", it) } ?: "null"
+        val ln = lng?.let { String.format(Locale.US, "%.6f", it) } ?: "null"
         return """{"speed":$s,"power":$p,"hr":$hr,"dist":$d,"grade":$g,"avgPower":$ap,"lat":$la,"lng":$ln,"ts":$timestamp}"""
     }
 }
@@ -30,6 +31,10 @@ object MetricsState {
     private val ref = AtomicReference(MetricsSnapshot())
 
     fun get(): MetricsSnapshot = ref.get()
+
+    fun reset() {
+        ref.set(MetricsSnapshot())
+    }
 
     fun updateSpeed(value: Double) {
         ref.updateAndGet { it.copy(speed = value, timestamp = System.currentTimeMillis()) }

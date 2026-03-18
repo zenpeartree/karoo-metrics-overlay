@@ -49,6 +49,8 @@ class OverlayService : Service() {
         }
 
         lastError = null
+        serverAddress = null
+        MetricsState.reset()
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Starting..."))
 
@@ -60,9 +62,7 @@ class OverlayService : Service() {
                 Log.i(TAG, "Connected to Karoo System")
                 startServer(system)
             } else {
-                Log.w(TAG, "Failed to connect to Karoo System")
-                lastError = "Karoo connection failed"
-                updateNotification("Karoo connection failed")
+                handleConnectionFailure()
             }
         }
 
@@ -71,7 +71,13 @@ class OverlayService : Service() {
 
     private fun startServer(system: KarooSystemService) {
         try {
-            val collector = MetricsCollector(system)
+            val prefs = getSharedPreferences("karoo_overlay_prefs", Context.MODE_PRIVATE)
+            val shareLocation = prefs.getBoolean(
+                MainActivity.KEY_SHARE_LOCATION,
+                MainActivity.DEFAULT_SHARE_LOCATION,
+            )
+
+            val collector = MetricsCollector(system, shareLocation)
             metricsCollector = collector
             collector.start()
 
@@ -92,6 +98,11 @@ class OverlayService : Service() {
             // Clean up partial state so a retry is possible
             metricsCollector?.stop()
             metricsCollector = null
+            try {
+                overlayServer?.stop()
+            } catch (stopError: Exception) {
+                Log.w(TAG, "Error stopping partially started server", stopError)
+            }
             overlayServer = null
             stopSelf()
         }
@@ -110,7 +121,20 @@ class OverlayService : Service() {
         overlayServer = null
         karooSystem?.disconnect()
         karooSystem = null
+        MetricsState.reset()
+        clearForegroundNotification()
         super.onDestroy()
+    }
+
+    private fun handleConnectionFailure() {
+        Log.w(TAG, "Failed to connect to Karoo System")
+        lastError = "Karoo connection failed"
+        serverAddress = null
+        isRunning = false
+        karooSystem?.disconnect()
+        karooSystem = null
+        updateNotification("Karoo connection failed")
+        stopSelf()
     }
 
     @Suppress("DEPRECATION")
@@ -162,5 +186,14 @@ class OverlayService : Service() {
     private fun updateNotification(text: String) {
         val manager = getSystemService(NotificationManager::class.java)
         manager.notify(NOTIFICATION_ID, buildNotification(text))
+    }
+
+    @Suppress("DEPRECATION")
+    private fun clearForegroundNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            stopForeground(true)
+        }
     }
 }
