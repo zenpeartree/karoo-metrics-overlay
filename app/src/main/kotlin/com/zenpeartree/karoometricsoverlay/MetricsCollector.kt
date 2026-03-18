@@ -21,10 +21,12 @@ class MetricsCollector(
 
     fun start() {
         subscribeSpeed()
+        subscribeAvgSpeed()
         subscribePower()
         subscribeHeartRate()
         subscribeDistance()
         subscribeGrade()
+        subscribeElevationGain()
         subscribeAvgPower()
         if (shareLocation) {
             subscribeLocation()
@@ -69,6 +71,24 @@ class MetricsCollector(
                     }
                 }
                 else -> Log.d(TAG, "Power stream state: $state")
+            }
+        }
+        consumerIds.add(id)
+    }
+
+    private fun subscribeAvgSpeed() {
+        val id = karooSystem.addConsumer(
+            OnStreamState.StartStreaming(DataType.Type.AVERAGE_SPEED),
+            onError = { Log.w(TAG, "Avg speed stream error: $it") },
+        ) { event: OnStreamState ->
+            when (val state = event.state) {
+                is StreamState.Streaming -> {
+                    val value = state.dataPoint.values[DataType.Field.AVERAGE_SPEED]
+                    if (value != null) {
+                        MetricsState.updateAvgSpeed(value * MS_TO_KMH)
+                    }
+                }
+                else -> Log.d(TAG, "Avg speed stream state: $state")
             }
         }
         consumerIds.add(id)
@@ -141,6 +161,24 @@ class MetricsCollector(
                     }
                 }
                 else -> Log.d(TAG, "Avg power stream state: $state")
+            }
+        }
+        consumerIds.add(id)
+    }
+
+    private fun subscribeElevationGain() {
+        val id = karooSystem.addConsumer(
+            OnStreamState.StartStreaming(DataType.Type.ELEVATION_GAIN),
+            onError = { Log.w(TAG, "Elevation gain stream error: $it") },
+        ) { event: OnStreamState ->
+            when (val state = event.state) {
+                is StreamState.Streaming -> {
+                    val value = state.dataPoint.values[DataType.Field.ELEVATION_GAIN]
+                    if (value != null) {
+                        MetricsState.updateElevationGain(value)
+                    }
+                }
+                else -> Log.d(TAG, "Elevation gain stream state: $state")
             }
         }
         consumerIds.add(id)

@@ -4,167 +4,426 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Karoo Live Metrics</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
+  :root {
+    --shell-bg: rgba(8, 12, 16, 0.56);
+    --shell-border: rgba(255, 255, 255, 0.08);
+    --shell-shadow: rgba(0, 0, 0, 0.22);
+    --text-main: #f5f8fa;
+    --text-soft: rgba(245, 248, 250, 0.76);
+    --text-dim: rgba(245, 248, 250, 0.42);
+    --power: #f2c44d;
+    --hr: #37d48a;
+    --climb: #ff6a56;
+    --descent: #58c3dd;
+    --neutral: rgba(245, 248, 250, 0.92);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
 
   body {
     background: transparent;
-    font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    color: #fff;
-    overflow: hidden;
+    color: var(--text-main);
+    font-family: 'IBM Plex Sans', sans-serif;
   }
 
-  .overlay-container {
+  .overlay {
     position: fixed;
-    bottom: 20px;
-    left: 20px;
+    inset: 0;
+    padding: 20px;
     display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    pointer-events: none;
   }
 
-  .map-container {
-    width: 380px;
-    height: 240px;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+  body.compact-mode .overlay {
+    padding: 12px;
+    justify-content: flex-start;
+    gap: 0;
+  }
+
+  body.narrow-mode .overlay {
+    padding: 14px;
+    display: grid;
+    justify-content: stretch;
+    align-content: end;
+    gap: 10px;
+  }
+
+  .metrics-shell {
+    width: clamp(320px, 48vw, 468px);
+    display: grid;
+    gap: 10px;
+  }
+
+  body.compact-mode .metrics-shell {
+    width: min(100%, 320px);
+  }
+
+  body.narrow-mode .metrics-shell {
+    width: min(100%, 420px);
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  body.compact-mode .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  body.narrow-mode .metrics-grid {
+    gap: 8px;
+  }
+
+  .metric-card {
     position: relative;
+    min-height: 118px;
+    padding: 14px 14px 12px;
+    border-radius: 18px;
+    background: var(--shell-bg);
+    border: 1px solid var(--shell-border);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 16px 36px var(--shell-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  body.compact-mode .metric-card {
+    min-height: 98px;
+    padding: 12px 12px 10px;
+    border-radius: 16px;
+  }
+
+  body.narrow-mode .metric-card {
+    min-height: 108px;
+    padding: 12px 12px 10px;
+    border-radius: 16px;
+  }
+
+  body.compact-mode .metric-card.compact-hidden {
     display: none;
   }
-  .map-container.visible { display: block; }
-  .map-container .leaflet-control-attribution { display: none; }
-  .map-container .leaflet-control-zoom { display: none; }
 
-  .metrics {
-    background: rgba(0, 0, 0, 0.80);
-    border-radius: 12px;
-    padding: 14px 18px 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px 20px;
-    min-width: 380px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
   }
 
-  .metric {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    position: relative;
-  }
+  .metric-card.power::before { background: var(--power); }
+  .metric-card.hr::before { background: var(--hr); }
+  .metric-card.grade::before { background: var(--climb); }
+  .metric-card.speed::before { background: #6fb8ff; }
+  .metric-card.distance::before { background: #9e8bff; }
+  .metric-card.avg-power::before { background: rgba(255, 255, 255, 0.8); }
 
   .metric-label {
-    font-size: 9px;
+    margin-bottom: 8px;
+    font-size: 10px;
     font-weight: 600;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: rgba(255, 255, 255, 0.45);
+    color: var(--text-dim);
+  }
+
+  .metric-main {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
   }
 
   .metric-value {
-    font-size: 26px;
-    font-weight: 700;
-    line-height: 1.15;
-    transition: opacity 0.15s ease;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 42px;
+    line-height: 0.88;
+    letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
+    transition: opacity 0.15s ease;
   }
 
-  .metric-unit {
-    font-size: 12px;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.5);
-    margin-left: 2px;
+  body.compact-mode .metric-value {
+    font-size: 36px;
+  }
+
+  body.narrow-mode .metric-value {
+    font-size: 38px;
   }
 
   .metric-value.updated {
-    opacity: 0.7;
+    opacity: 0.72;
   }
 
-  .zone-bar {
-    height: 3px;
-    border-radius: 2px;
-    margin-top: 4px;
-    transition: background-color 0.3s ease, width 0.3s ease;
+  .metric-unit {
+    padding-bottom: 5px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-soft);
+  }
+
+  body.compact-mode .metric-unit {
+    padding-bottom: 4px;
+    font-size: 12px;
+  }
+
+  body.narrow-mode .metric-unit {
+    font-size: 12px;
+  }
+
+  .metric-sub {
+    margin-top: 10px;
+    min-height: 18px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  body.compact-mode .metric-sub {
+    margin-top: 8px;
+    min-height: 16px;
+    font-size: 10px;
+  }
+
+  body.narrow-mode .metric-sub {
+    min-height: 16px;
+    font-size: 10px;
+  }
+
+  .bar-track {
+    margin-top: 10px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  body.compact-mode .bar-track {
+    margin-top: 8px;
+    height: 4px;
+  }
+
+  .bar-fill {
+    height: 100%;
     width: 0%;
+    border-radius: inherit;
+    transition: width 0.3s ease, background-color 0.3s ease;
   }
 
-  .zone-label {
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    margin-top: 2px;
-    transition: color 0.3s ease;
-    color: rgba(255,255,255,0.3);
+  .power .metric-value,
+  .power .metric-sub { color: var(--power); }
+
+  .hr .metric-value,
+  .hr .metric-sub { color: var(--hr); }
+
+  .grade .metric-value.grade-positive { color: var(--climb); }
+  .grade .metric-value.grade-negative { color: var(--descent); }
+  .grade .metric-value.grade-flat { color: var(--neutral); }
+
+  .map-panel {
+    width: clamp(220px, 28vw, 320px);
+    padding: 10px;
+    border-radius: 24px;
+    background: rgba(8, 12, 16, 0.44);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+    display: none;
   }
 
-  .grade-positive { color: #ef4444; }
-  .grade-flat { color: rgba(255,255,255,0.85); }
-  .grade-negative { color: #22d3ee; }
+  .map-panel.visible {
+    display: block;
+  }
+
+  body.compact-mode .map-panel {
+    display: none !important;
+  }
+
+  body.narrow-mode .map-panel {
+    width: min(100%, 240px);
+    margin-left: auto;
+  }
+
+  .map-shell {
+    position: relative;
+    width: 100%;
+    height: 218px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  body.narrow-mode .map-shell {
+    height: 164px;
+  }
+
+  .map-gradient {
+    position: absolute;
+    inset: 0;
+    z-index: 450;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(4, 8, 12, 0.16), transparent 36%),
+      linear-gradient(0deg, rgba(4, 8, 12, 0.34), transparent 28%);
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+    filter: saturate(0.82) contrast(1.03) brightness(0.92);
+  }
+
+  .map-fallback {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(245, 248, 250, 0.76);
+    background: rgba(8, 12, 16, 0.72);
+    backdrop-filter: blur(8px);
+    z-index: 500;
+  }
+
+  .map-panel.unavailable .map-fallback {
+    display: flex;
+  }
 
   .status {
     position: fixed;
-    bottom: 6px;
     left: 24px;
-    font-size: 8px;
-    color: rgba(255, 255, 255, 0.2);
+    bottom: 8px;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(245, 248, 250, 0.24);
   }
-  .status.disconnected { color: rgba(255, 80, 80, 0.4); }
+
+  body.compact-mode .status {
+    left: 16px;
+    bottom: 6px;
+    font-size: 8px;
+  }
+
+  .status.disconnected {
+    color: rgba(255, 112, 112, 0.46);
+  }
+
+  .leaflet-control-attribution,
+  .leaflet-control-zoom {
+    display: none;
+  }
 
   .rider-dot {
-    width: 14px;
-    height: 14px;
-    background: #22c55e;
-    border: 2px solid #fff;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-    animation: pulse 2s ease-in-out infinite;
+    background: radial-gradient(circle at 35% 35%, #d4fff5, #17c6b5 60%, #0b766d 100%);
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    box-shadow:
+      0 0 0 7px rgba(23, 198, 181, 0.1),
+      0 0 22px rgba(23, 198, 181, 0.28);
   }
-  @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.6); }
-    50% { box-shadow: 0 0 16px rgba(34, 197, 94, 0.9); }
-  }
+
 </style>
 </head>
 <body>
-  <div class="overlay-container">
-    <div class="map-container" id="map-container">
-      <div id="map" style="width:100%;height:100%;"></div>
+  <div class="overlay">
+    <div class="metrics-shell">
+      <div class="metrics-grid">
+        <div class="metric-card power">
+          <div class="metric-label">Power</div>
+          <div class="metric-main">
+            <div class="metric-value" id="power">--</div>
+            <div class="metric-unit">W</div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="power-bar"></div></div>
+          <div class="metric-sub" id="power-zone"></div>
+        </div>
+
+        <div class="metric-card hr">
+          <div class="metric-label">Heart Rate</div>
+          <div class="metric-main">
+            <div class="metric-value" id="hr">--</div>
+            <div class="metric-unit">bpm</div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" id="hr-bar"></div></div>
+          <div class="metric-sub" id="hr-zone"></div>
+        </div>
+
+        <div class="metric-card grade">
+          <div class="metric-label">Grade</div>
+          <div class="metric-main">
+            <div class="metric-value grade-flat" id="grade">--</div>
+            <div class="metric-unit">%</div>
+          </div>
+          <div class="metric-sub" id="elevGain">Elev Gain -- m</div>
+        </div>
+
+        <div class="metric-card speed">
+          <div class="metric-label">Speed</div>
+          <div class="metric-main">
+            <div class="metric-value" id="speed">--</div>
+            <div class="metric-unit">km/h</div>
+          </div>
+          <div class="metric-sub" id="avgSpeed">Avg -- km/h</div>
+        </div>
+
+        <div class="metric-card distance compact-hidden">
+          <div class="metric-label">Distance</div>
+          <div class="metric-main">
+            <div class="metric-value" id="dist">--</div>
+            <div class="metric-unit">km</div>
+          </div>
+          <div class="metric-sub"></div>
+        </div>
+
+        <div class="metric-card avg-power compact-hidden">
+          <div class="metric-label">Avg Power</div>
+          <div class="metric-main">
+            <div class="metric-value" id="avgPower">--</div>
+            <div class="metric-unit">W</div>
+          </div>
+          <div class="metric-sub"></div>
+        </div>
+      </div>
     </div>
-    <div class="metrics">
-      <!-- Row 1 -->
-      <div class="metric">
-        <span class="metric-label">Power</span>
-        <span class="metric-value" id="power">--<span class="metric-unit">W</span></span>
-        <div class="zone-bar" id="power-bar"></div>
-        <span class="zone-label" id="power-zone"></span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Heart Rate</span>
-        <span class="metric-value" id="hr">--<span class="metric-unit">bpm</span></span>
-        <div class="zone-bar" id="hr-bar"></div>
-        <span class="zone-label" id="hr-zone"></span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Grade</span>
-        <span class="metric-value" id="grade">--<span class="metric-unit">%</span></span>
-      </div>
-      <!-- Row 2 -->
-      <div class="metric">
-        <span class="metric-label">Speed</span>
-        <span class="metric-value" id="speed">--<span class="metric-unit">km/h</span></span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Distance</span>
-        <span class="metric-value" id="dist">--<span class="metric-unit">km</span></span>
-      </div>
-      <div class="metric">
-        <span class="metric-label">Avg Power</span>
-        <span class="metric-value" id="avgPower">--<span class="metric-unit">W</span></span>
+
+    <div class="map-panel" id="map-panel">
+      <div class="map-shell">
+        <div class="map-gradient"></div>
+        <div id="map"></div>
+        <div class="map-fallback" id="map-fallback">Map unavailable</div>
       </div>
     </div>
   </div>
@@ -172,27 +431,32 @@
 
 <script>
 (function() {
-  // === Zone Configuration ===
   var FTP = 250;
   var MAX_HR = 187;
   var SHOW_MAP = false;
+  var MAX_TRAIL_POINTS = 250;
+  var MAP_EDGE_PADDING = -0.35;
+  var NARROW_MAX_WIDTH = 840;
+  var NARROW_MAX_HEIGHT = 620;
+  var COMPACT_MAX_WIDTH = 420;
+  var COMPACT_MAX_HEIGHT = 760;
 
   var powerZones = [
-    { name: 'Z1 Recovery',  min: 0,   max: 0.55, color: '#94a3b8' },
+    { name: 'Z1 Recovery', min: 0, max: 0.55, color: '#94a3b8' },
     { name: 'Z2 Endurance', min: 0.55, max: 0.75, color: '#3b82f6' },
-    { name: 'Z3 Tempo',     min: 0.75, max: 0.90, color: '#22c55e' },
+    { name: 'Z3 Tempo', min: 0.75, max: 0.90, color: '#22c55e' },
     { name: 'Z4 Threshold', min: 0.90, max: 1.05, color: '#eab308' },
-    { name: 'Z5 VO2max',    min: 1.05, max: 1.20, color: '#f97316' },
+    { name: 'Z5 VO2max', min: 1.05, max: 1.20, color: '#f97316' },
     { name: 'Z6 Anaerobic', min: 1.20, max: 1.50, color: '#ef4444' },
-    { name: 'Z7 Sprint',    min: 1.50, max: 9.99, color: '#a855f7' },
+    { name: 'Z7 Sprint', min: 1.50, max: 9.99, color: '#a855f7' }
   ];
 
   var hrZones = [
-    { name: 'Z1 Recovery',  min: 0,    max: 0.60, color: '#94a3b8' },
-    { name: 'Z2 Aerobic',   min: 0.60, max: 0.70, color: '#3b82f6' },
-    { name: 'Z3 Tempo',     min: 0.70, max: 0.80, color: '#22c55e' },
+    { name: 'Z1 Recovery', min: 0, max: 0.60, color: '#94a3b8' },
+    { name: 'Z2 Aerobic', min: 0.60, max: 0.70, color: '#3b82f6' },
+    { name: 'Z3 Tempo', min: 0.70, max: 0.80, color: '#22c55e' },
     { name: 'Z4 Threshold', min: 0.80, max: 0.90, color: '#eab308' },
-    { name: 'Z5 VO2max',    min: 0.90, max: 1.00, color: '#ef4444' },
+    { name: 'Z5 VO2max', min: 0.90, max: 1.00, color: '#ef4444' }
   ];
 
   function getZone(value, reference, zones) {
@@ -213,35 +477,118 @@
 
   var els = {
     speed: document.getElementById('speed'),
+    avgSpeed: document.getElementById('avgSpeed'),
     power: document.getElementById('power'),
     hr: document.getElementById('hr'),
     dist: document.getElementById('dist'),
     grade: document.getElementById('grade'),
+    elevGain: document.getElementById('elevGain'),
     avgPower: document.getElementById('avgPower'),
     powerBar: document.getElementById('power-bar'),
     powerZone: document.getElementById('power-zone'),
     hrBar: document.getElementById('hr-bar'),
     hrZone: document.getElementById('hr-zone'),
     status: document.getElementById('status'),
-    mapContainer: document.getElementById('map-container'),
+    mapPanel: document.getElementById('map-panel'),
+    mapFallback: document.getElementById('map-fallback')
   };
 
-  // === Map setup ===
   var map = null;
   var riderMarker = null;
   var routeTrail = null;
   var trailPoints = [];
   var mapReady = false;
+  var mapUnavailable = false;
+  var narrowMode = false;
+  var compactMode = false;
+  var updateTimers = {};
+  var lastSnapshot = null;
 
-  if (!SHOW_MAP && els.mapContainer && els.mapContainer.parentNode) {
-    els.mapContainer.parentNode.removeChild(els.mapContainer);
-    els.mapContainer = null;
+  if (!SHOW_MAP && els.mapPanel && els.mapPanel.parentNode) {
+    els.mapPanel.parentNode.removeChild(els.mapPanel);
+    els.mapPanel = null;
+  }
+
+  function pulse(el) {
+    if (!el) return;
+    el.classList.add('updated');
+    if (updateTimers[el.id]) {
+      clearTimeout(updateTimers[el.id]);
+    }
+    updateTimers[el.id] = setTimeout(function() {
+      el.classList.remove('updated');
+    }, 150);
+  }
+
+  function setMetricValue(el, value, decimals) {
+    var display = value != null ? (decimals > 0 ? value.toFixed(decimals) : Math.round(value)) : '--';
+    if (el.textContent !== display) {
+      el.textContent = display;
+      pulse(el);
+    }
+  }
+
+  function setMetricSub(el, text) {
+    if (el.textContent !== text) {
+      el.textContent = text;
+    }
+  }
+
+  function updateResponsiveMode() {
+    var wasCompact = compactMode;
+    var wasNarrow = narrowMode;
+    narrowMode = !compactMode && (window.innerWidth <= NARROW_MAX_WIDTH || window.innerHeight <= NARROW_MAX_HEIGHT);
+    compactMode = window.innerWidth <= COMPACT_MAX_WIDTH || window.innerHeight <= COMPACT_MAX_HEIGHT;
+    if (compactMode) {
+      narrowMode = false;
+    } else {
+      narrowMode = window.innerWidth <= NARROW_MAX_WIDTH || window.innerHeight <= NARROW_MAX_HEIGHT;
+    }
+    document.body.classList.toggle('compact-mode', compactMode);
+    document.body.classList.toggle('narrow-mode', narrowMode);
+
+    if (els.mapPanel && compactMode) {
+      els.mapPanel.classList.remove('visible');
+    }
+
+    if (SHOW_MAP && !compactMode && lastSnapshot && lastSnapshot.lat != null && lastSnapshot.lng != null) {
+      if (!mapReady) {
+        initMap(lastSnapshot.lat, lastSnapshot.lng);
+      }
+      if (map) {
+        window.requestAnimationFrame(function() {
+          map.invalidateSize();
+          if (shouldRecenterMap([lastSnapshot.lat, lastSnapshot.lng])) {
+            map.panTo([lastSnapshot.lat, lastSnapshot.lng], { animate: false });
+          }
+        });
+      }
+    } else if ((wasCompact !== compactMode || wasNarrow !== narrowMode) && map) {
+      window.requestAnimationFrame(function() {
+        map.invalidateSize();
+      });
+    }
+  }
+
+  function showMapUnavailable(message) {
+    if (!els.mapPanel) return;
+    mapUnavailable = true;
+    els.mapPanel.classList.add('visible');
+    els.mapPanel.classList.add('unavailable');
+    if (els.mapFallback) {
+      els.mapFallback.textContent = message || 'Map unavailable';
+    }
   }
 
   function initMap(lat, lng) {
-    if (!SHOW_MAP || !els.mapContainer) return;
+    if (!SHOW_MAP || compactMode || !els.mapPanel || mapUnavailable) return;
     if (mapReady) return;
-    els.mapContainer.classList.add('visible');
+    els.mapPanel.classList.add('visible');
+
+    if (typeof L === 'undefined') {
+      showMapUnavailable('Map library unavailable');
+      return;
+    }
 
     map = L.map('map', {
       zoomControl: false,
@@ -249,114 +596,135 @@
       dragging: false,
       scrollWheelZoom: false,
       doubleClickZoom: false,
-      touchZoom: false,
+      touchZoom: false
     }).setView([lat, lng], 11);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+    var tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    });
+    tileLayer.on('tileerror', function() {
+      showMapUnavailable('Map tiles unavailable');
+    });
+    tileLayer.addTo(map);
 
     routeTrail = L.polyline([], {
-      color: '#22c55e',
-      weight: 3,
-      opacity: 0.7,
+      color: '#17c6b5',
+      weight: 4,
+      opacity: 0.92
     }).addTo(map);
 
     var riderIcon = L.divIcon({
       className: '',
       html: '<div class="rider-dot"></div>',
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
     });
     riderMarker = L.marker([lat, lng], { icon: riderIcon }).addTo(map);
 
     mapReady = true;
   }
 
+  function shouldRecenterMap(pos) {
+    if (!map) return false;
+    var bounds = map.getBounds();
+    if (!bounds || !bounds.isValid()) return true;
+    return !bounds.pad(MAP_EDGE_PADDING).contains(pos);
+  }
+
   function updateMap(lat, lng) {
-    if (!SHOW_MAP || lat == null || lng == null) return;
+    if (!SHOW_MAP || compactMode || lat == null || lng == null || mapUnavailable) return;
     if (!mapReady) { initMap(lat, lng); return; }
 
     var pos = [lat, lng];
     riderMarker.setLatLng(pos);
-    map.panTo(pos, { animate: true, duration: 1 });
+    if (shouldRecenterMap(pos)) {
+      map.panTo(pos, { animate: false });
+    }
 
-    // Add point to trail (skip if too close to last point)
     var last = trailPoints[trailPoints.length - 1];
     if (!last || Math.abs(last[0] - lat) > 0.00005 || Math.abs(last[1] - lng) > 0.00005) {
       trailPoints.push(pos);
+      if (trailPoints.length > MAX_TRAIL_POINTS) {
+        trailPoints.shift();
+      }
       routeTrail.setLatLngs(trailPoints);
     }
   }
 
-  // === Metrics ===
-  var ws = null;
-  var reconnectDelay = 2000;
-  var wsFailCount = 0;
-  var pollInterval = null;
-
-  function formatValue(el, value, decimals, unit) {
-    var display = value != null ? (decimals > 0 ? value.toFixed(decimals) : Math.round(value)) : '--';
-    var html = display + '<span class="metric-unit">' + unit + '</span>';
-    if (el.innerHTML !== html) {
-      el.innerHTML = html;
-      el.classList.add('updated');
-      setTimeout(function() { el.classList.remove('updated'); }, 150);
-    }
-  }
-
   function updateMetrics(data) {
-    formatValue(els.speed, data.speed, 1, 'km/h');
-    formatValue(els.power, data.power, 0, 'W');
-    formatValue(els.hr, data.hr, 0, 'bpm');
-    formatValue(els.dist, data.dist, 1, 'km');
-    formatValue(els.avgPower, data.avgPower, 0, 'W');
+    lastSnapshot = data;
+    setMetricValue(els.speed, data.speed, 1);
+    setMetricValue(els.power, data.power, 0);
+    setMetricValue(els.hr, data.hr, 0);
+    setMetricValue(els.dist, data.dist, 1);
+    setMetricValue(els.avgPower, data.avgPower, 0);
 
-    // Grade with color
-    if (data.grade != null) {
-      var g = data.grade;
-      var display = (g >= 0 ? '+' : '') + g.toFixed(1);
-      var cls = g > 0.5 ? 'grade-positive' : (g < -0.5 ? 'grade-negative' : 'grade-flat');
-      els.grade.innerHTML = '<span class="' + cls + '">' + display + '</span><span class="metric-unit">%</span>';
+    if (data.avgSpeed != null) {
+      setMetricSub(els.avgSpeed, 'Avg ' + data.avgSpeed.toFixed(1) + ' km/h');
     } else {
-      els.grade.innerHTML = '--<span class="metric-unit">%</span>';
+      setMetricSub(els.avgSpeed, 'Avg -- km/h');
     }
 
-    // Power zone
+    if (data.elevGain != null) {
+      setMetricSub(els.elevGain, 'Elev Gain ' + Math.round(data.elevGain) + ' m');
+    } else {
+      setMetricSub(els.elevGain, 'Elev Gain -- m');
+    }
+
+    if (data.grade != null) {
+      setMetricValue(els.grade, Math.abs(data.grade), 1);
+      var gradeClass = data.grade > 0.5 ? 'grade-positive' : (data.grade < -0.5 ? 'grade-negative' : 'grade-flat');
+      els.grade.className = 'metric-value ' + gradeClass;
+      if (data.grade >= 0) {
+        els.grade.textContent = '+' + data.grade.toFixed(1);
+      } else {
+        els.grade.textContent = data.grade.toFixed(1);
+      }
+      pulse(els.grade);
+    } else {
+      els.grade.className = 'metric-value grade-flat';
+      els.grade.textContent = '--';
+    }
+
     if (data.power != null && data.power > 0) {
       var pz = getZone(data.power, FTP, powerZones);
-      var pFill = getZoneFill(data.power, FTP, pz);
-      els.powerBar.style.backgroundColor = pz.color;
-      els.powerBar.style.width = pFill + '%';
-      els.powerZone.textContent = pz.name;
-      els.powerZone.style.color = pz.color;
+      els.powerBar.style.width = getZoneFill(data.power, FTP, pz) + '%';
+      els.powerBar.style.background = 'linear-gradient(90deg, ' + pz.color + ', rgba(255,255,255,0.95))';
       els.power.style.color = pz.color;
+      setMetricSub(els.powerZone, pz.name);
+      els.powerZone.style.color = pz.color;
     } else {
       els.powerBar.style.width = '0%';
-      els.powerZone.textContent = '';
+      els.powerBar.style.background = '';
       els.power.style.color = '';
+      setMetricSub(els.powerZone, '');
+      els.powerZone.style.color = '';
     }
 
-    // HR zone
     if (data.hr != null && data.hr > 0) {
       var hz = getZone(data.hr, MAX_HR, hrZones);
-      var hFill = getZoneFill(data.hr, MAX_HR, hz);
-      els.hrBar.style.backgroundColor = hz.color;
-      els.hrBar.style.width = hFill + '%';
-      els.hrZone.textContent = hz.name;
-      els.hrZone.style.color = hz.color;
+      els.hrBar.style.width = getZoneFill(data.hr, MAX_HR, hz) + '%';
+      els.hrBar.style.background = 'linear-gradient(90deg, ' + hz.color + ', rgba(255,255,255,0.95))';
       els.hr.style.color = hz.color;
+      setMetricSub(els.hrZone, hz.name);
+      els.hrZone.style.color = hz.color;
     } else {
       els.hrBar.style.width = '0%';
-      els.hrZone.textContent = '';
+      els.hrBar.style.background = '';
       els.hr.style.color = '';
+      setMetricSub(els.hrZone, '');
+      els.hrZone.style.color = '';
     }
 
-    // Map
     if (SHOW_MAP) {
       updateMap(data.lat, data.lng);
     }
   }
+
+  var ws = null;
+  var reconnectDelay = 2000;
+  var wsFailCount = 0;
+  var pollInterval = null;
 
   function connectWebSocket() {
     var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -367,17 +735,22 @@
       reconnectDelay = 2000;
       els.status.textContent = '';
       els.status.className = 'status';
-      if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
     };
 
     ws.onmessage = function(event) {
-      try { updateMetrics(JSON.parse(event.data)); } catch(e) {}
+      try {
+        updateMetrics(JSON.parse(event.data));
+      } catch (e) {}
     };
 
     ws.onclose = function() {
       ws = null;
       wsFailCount++;
-      els.status.textContent = 'reconnecting...';
+      els.status.textContent = 'reconnecting';
       els.status.className = 'status disconnected';
       if (wsFailCount >= 3) {
         startPolling();
@@ -387,16 +760,29 @@
       }
     };
 
-    ws.onerror = function() { if (ws) ws.close(); };
+    ws.onerror = function() {
+      if (ws) ws.close();
+    };
   }
+
+  updateResponsiveMode();
+  window.addEventListener('resize', updateResponsiveMode);
 
   function startPolling() {
     els.status.textContent = 'polling';
     if (pollInterval) return;
     pollInterval = setInterval(function() {
-      fetch('/metrics').then(function(r) { return r.json(); }).then(updateMetrics).catch(function() {});
+      fetch('/metrics')
+        .then(function(r) { return r.json(); })
+        .then(updateMetrics)
+        .catch(function() {});
     }, 1000);
-    setTimeout(function() { if (!ws) { wsFailCount = 0; connectWebSocket(); } }, 15000);
+    setTimeout(function() {
+      if (!ws) {
+        wsFailCount = 0;
+        connectWebSocket();
+      }
+    }, 15000);
   }
 
   connectWebSocket();

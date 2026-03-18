@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karoo Metrics Overlay - Mobile Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root {
+    --shell-bg: rgba(8, 12, 16, 0.6);
+    --shell-border: rgba(255, 255, 255, 0.09);
+    --shell-shadow: rgba(0, 0, 0, 0.28);
+    --text-main: #f5f8fa;
+    --text-soft: rgba(245, 248, 250, 0.78);
+    --text-dim: rgba(245, 248, 250, 0.44);
+    --power: #f2c44d;
+    --hr: #37d48a;
+    --climb: #ff6a56;
+    --neutral: rgba(245, 248, 250, 0.92);
+    --speed: #6fb8ff;
+    --distance: #9e8bff;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(circle at top left, rgba(23, 198, 181, 0.12), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(111, 184, 255, 0.12), transparent 30%),
+      linear-gradient(180deg, #0f161c, #090d11);
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--text-main);
+  }
+
+  .phone {
+    position: relative;
+    width: min(390px, 92vw);
+    aspect-ratio: 9 / 19.5;
+    padding: 14px;
+    border-radius: 38px;
+    background: #05080b;
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.5),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34%;
+    height: 24px;
+    border-radius: 0 0 16px 16px;
+    background: #05080b;
+    z-index: 5;
+  }
+
+  .screen {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 28px;
+    background:
+      linear-gradient(180deg, rgba(10, 15, 19, 0.08), rgba(10, 15, 19, 0.34)),
+      url('Cyclist POV 046.jpg') center/cover no-repeat;
+  }
+
+  .screen::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(4, 8, 12, 0.04), transparent 30%, transparent 62%, rgba(4, 8, 12, 0.14)),
+      radial-gradient(circle at top center, rgba(255, 255, 255, 0.06), transparent 20%);
+    pointer-events: none;
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    padding: 16px 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 7px;
+  }
+
+  .metric-card {
+    position: relative;
+    min-height: 76px;
+    padding: 10px 10px 9px;
+    border-radius: 16px;
+    background: var(--shell-bg);
+    border: 1px solid var(--shell-border);
+    backdrop-filter: blur(14px);
+    box-shadow:
+      0 14px 28px var(--shell-shadow),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .metric-card.power::before { background: var(--power); }
+  .metric-card.hr::before { background: var(--hr); }
+  .metric-card.grade::before { background: var(--climb); }
+  .metric-card.speed::before { background: var(--speed); }
+  .metric-card.distance::before { background: var(--distance); }
+  .metric-card.avg::before { background: rgba(255, 255, 255, 0.8); }
+
+  .metric-label {
+    margin-bottom: 5px;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .metric-main {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .metric-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 31px;
+    line-height: 0.88;
+    letter-spacing: 0.02em;
+  }
+
+  .metric-unit {
+    padding-bottom: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-soft);
+  }
+
+  .metric-sub {
+    margin-top: 6px;
+    min-height: 14px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  .bar-track {
+    margin-top: 6px;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: inherit;
+  }
+
+  .power .metric-value,
+  .power .metric-sub { color: var(--power); }
+
+  .hr .metric-value,
+  .hr .metric-sub { color: var(--hr); }
+
+  .grade .metric-value { color: var(--climb); }
+
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="screen">
+      <section class="overlay">
+        <div class="metrics-grid">
+          <article class="metric-card power">
+            <div class="metric-label">Power</div>
+            <div class="metric-main">
+              <div class="metric-value">247</div>
+              <div class="metric-unit">W</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:85%; background: linear-gradient(90deg, #e8bb3d, #f7dc80);"></div></div>
+            <div class="metric-sub">Z4 Threshold</div>
+          </article>
+
+          <article class="metric-card hr">
+            <div class="metric-label">Heart Rate</div>
+            <div class="metric-main">
+              <div class="metric-value">156</div>
+              <div class="metric-unit">bpm</div>
+            </div>
+            <div class="bar-track"><div class="bar-fill" style="width:60%; background: linear-gradient(90deg, #26c880, #78efbc);"></div></div>
+            <div class="metric-sub">Z3 Tempo</div>
+          </article>
+
+          <article class="metric-card grade">
+            <div class="metric-label">Grade</div>
+            <div class="metric-main">
+              <div class="metric-value">+4.2</div>
+              <div class="metric-unit">%</div>
+            </div>
+            <div class="metric-sub">Elev Gain 812 m</div>
+          </article>
+
+          <article class="metric-card speed">
+            <div class="metric-label">Speed</div>
+            <div class="metric-main">
+              <div class="metric-value">28.4</div>
+              <div class="metric-unit">km/h</div>
+            </div>
+            <div class="metric-sub">Avg 26.1 km/h</div>
+          </article>
+
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

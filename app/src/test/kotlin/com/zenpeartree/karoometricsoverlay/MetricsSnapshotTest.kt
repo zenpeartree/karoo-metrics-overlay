@@ -14,10 +14,12 @@ class MetricsSnapshotTest {
         val json = JSONObject(snapshot.toJson())
 
         assertTrue(json.isNull("speed"))
+        assertTrue(json.isNull("avgSpeed"))
         assertTrue(json.isNull("power"))
         assertTrue(json.isNull("hr"))
         assertTrue(json.isNull("dist"))
         assertTrue(json.isNull("grade"))
+        assertTrue(json.isNull("elevGain"))
         assertTrue(json.isNull("avgPower"))
         assertTrue(json.isNull("lat"))
         assertTrue(json.isNull("lng"))
@@ -28,10 +30,12 @@ class MetricsSnapshotTest {
     fun `toJson with all values populated produces correct JSON`() {
         val snapshot = MetricsSnapshot(
             speed = 32.5,
+            avgSpeed = 30.1,
             power = 245,
             heartRate = 152,
             distance = 42.3,
             grade = 5.7,
+            elevationGain = 812.0,
             avgPower = 210,
             lat = 38.7870,
             lng = -9.3900,
@@ -40,10 +44,12 @@ class MetricsSnapshotTest {
         val json = JSONObject(snapshot.toJson())
 
         assertEquals(32.5, json.getDouble("speed"), 0.1)
+        assertEquals(30.1, json.getDouble("avgSpeed"), 0.1)
         assertEquals(245, json.getInt("power"))
         assertEquals(152, json.getInt("hr"))
         assertEquals(42.3, json.getDouble("dist"), 0.1)
         assertEquals(5.7, json.getDouble("grade"), 0.1)
+        assertEquals(812.0, json.getDouble("elevGain"), 0.1)
         assertEquals(210, json.getInt("avgPower"))
         assertEquals(38.787, json.getDouble("lat"), 0.001)
         assertEquals(-9.39, json.getDouble("lng"), 0.001)
@@ -75,20 +81,24 @@ class MetricsSnapshotTest {
     fun `toJson with zero values`() {
         val snapshot = MetricsSnapshot(
             speed = 0.0,
+            avgSpeed = 0.0,
             power = 0,
             heartRate = 0,
             distance = 0.0,
             grade = 0.0,
+            elevationGain = 0.0,
             avgPower = 0,
             timestamp = 0L,
         )
         val json = JSONObject(snapshot.toJson())
 
         assertEquals(0.0, json.getDouble("speed"), 0.01)
+        assertEquals(0.0, json.getDouble("avgSpeed"), 0.01)
         assertEquals(0, json.getInt("power"))
         assertEquals(0, json.getInt("hr"))
         assertEquals(0.0, json.getDouble("dist"), 0.01)
         assertEquals(0.0, json.getDouble("grade"), 0.01)
+        assertEquals(0.0, json.getDouble("elevGain"), 0.01)
         assertEquals(0, json.getInt("avgPower"))
     }
 
@@ -98,10 +108,12 @@ class MetricsSnapshotTest {
         val json = JSONObject(snapshot.toJson())
 
         assertEquals(25.0, json.getDouble("speed"), 0.1)
+        assertTrue(json.isNull("avgSpeed"))
         assertTrue(json.isNull("power"))
         assertEquals(140, json.getInt("hr"))
         assertTrue(json.isNull("dist"))
         assertTrue(json.isNull("grade"))
+        assertTrue(json.isNull("elevGain"))
         assertTrue(json.isNull("avgPower"))
         assertTrue(json.isNull("lat"))
         assertTrue(json.isNull("lng"))
@@ -126,20 +138,24 @@ class MetricsSnapshotTest {
     fun `toJson with large values`() {
         val snapshot = MetricsSnapshot(
             speed = 99.9,
+            avgSpeed = 37.4,
             power = 2000,
             heartRate = 220,
             distance = 999.9,
             grade = 25.0,
+            elevationGain = 5432.0,
             avgPower = 1500,
             timestamp = Long.MAX_VALUE,
         )
         val json = JSONObject(snapshot.toJson())
 
         assertEquals(99.9, json.getDouble("speed"), 0.1)
+        assertEquals(37.4, json.getDouble("avgSpeed"), 0.1)
         assertEquals(2000, json.getInt("power"))
         assertEquals(220, json.getInt("hr"))
         assertEquals(999.9, json.getDouble("dist"), 0.1)
         assertEquals(25.0, json.getDouble("grade"), 0.1)
+        assertEquals(5432.0, json.getDouble("elevGain"), 0.1)
         assertEquals(1500, json.getInt("avgPower"))
     }
 
@@ -147,10 +163,12 @@ class MetricsSnapshotTest {
     fun `default snapshot has all null metric values`() {
         val snapshot = MetricsSnapshot()
         assertEquals(null, snapshot.speed)
+        assertEquals(null, snapshot.avgSpeed)
         assertEquals(null, snapshot.power)
         assertEquals(null, snapshot.heartRate)
         assertEquals(null, snapshot.distance)
         assertEquals(null, snapshot.grade)
+        assertEquals(null, snapshot.elevationGain)
         assertEquals(null, snapshot.avgPower)
         assertEquals(null, snapshot.lat)
         assertEquals(null, snapshot.lng)
@@ -158,12 +176,14 @@ class MetricsSnapshotTest {
 
     @Test
     fun `copy preserves unchanged fields`() {
-        val original = MetricsSnapshot(speed = 30.0, power = 200, heartRate = 150, timestamp = 100L)
+        val original = MetricsSnapshot(speed = 30.0, avgSpeed = 28.0, power = 200, heartRate = 150, elevationGain = 200.0, timestamp = 100L)
         val updated = original.copy(power = 250, timestamp = 200L)
 
         assertEquals(30.0, updated.speed!!, 0.01)
+        assertEquals(28.0, updated.avgSpeed!!, 0.01)
         assertEquals(250, updated.power)
         assertEquals(150, updated.heartRate)
+        assertEquals(200.0, updated.elevationGain!!, 0.01)
         assertEquals(200L, updated.timestamp)
     }
 

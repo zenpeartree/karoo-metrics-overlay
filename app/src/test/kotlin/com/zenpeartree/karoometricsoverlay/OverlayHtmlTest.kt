@@ -25,7 +25,7 @@ class OverlayHtmlTest {
 
     @Test
     fun `overlay contains all metric elements`() {
-        val requiredIds = listOf("speed", "power", "hr", "dist", "grade", "avgPower")
+        val requiredIds = listOf("speed", "power", "hr", "dist", "grade", "avgPower", "avgSpeed", "elevGain")
         for (id in requiredIds) {
             assertTrue("Missing element with id='$id'", html.contains("id=\"$id\""))
         }
@@ -87,17 +87,18 @@ class OverlayHtmlTest {
     @Test
     fun `overlay has correct metric units`() {
         assertTrue("Missing km/h unit", html.contains("km/h"))
-        assertTrue("Missing W unit for power", html.contains("'W'"))
+        assertTrue("Missing W unit for power", html.contains(">W<"))
         assertTrue("Missing bpm unit", html.contains("bpm"))
-        assertTrue("Missing km unit for distance", html.contains("'km'"))
-        assertTrue("Missing % unit for grade", html.contains("'%'"))
+        assertTrue("Missing km unit for distance", html.contains(">km<"))
+        assertTrue("Missing % unit for grade", html.contains(">%<"))
     }
 
     @Test
     fun `overlay includes Leaflet for map rendering`() {
         assertTrue("Should include Leaflet CSS", html.contains("leaflet"))
-        assertTrue("Should include map container", html.contains("id=\"map-container\""))
+        assertTrue("Should include map panel", html.contains("id=\"map-panel\""))
         assertTrue("Should include map element", html.contains("id=\"map\""))
+        assertTrue("Should include map fallback element", html.contains("id=\"map-fallback\""))
     }
 
     @Test
@@ -114,5 +115,40 @@ class OverlayHtmlTest {
             "Map update should allow zero coordinates",
             html.contains("lat == null || lng == null"),
         )
+    }
+
+    @Test
+    fun `overlay includes graceful map fallback handling`() {
+        assertTrue("Should detect missing Leaflet", html.contains("typeof L === 'undefined'"))
+        assertTrue("Should expose map unavailable handler", html.contains("function showMapUnavailable"))
+        assertTrue("Should handle tile load failures", html.contains("tileerror"))
+    }
+
+    @Test
+    fun `overlay caps route trail growth and reduces recenter jitter`() {
+        assertTrue("Should cap trail points", html.contains("var MAX_TRAIL_POINTS = 250;"))
+        assertTrue("Should trim old trail points", html.contains("trailPoints.shift()"))
+        assertTrue("Should only recenter when needed", html.contains("function shouldRecenterMap"))
+    }
+
+    @Test
+    fun `overlay includes production card layout and secondary ride stats`() {
+        assertTrue("Should include metrics shell", html.contains("metrics-shell"))
+        assertTrue("Should include metrics grid", html.contains("metrics-grid"))
+        assertTrue("Should show avg speed subline", html.contains("Avg -- km/h"))
+        assertTrue("Should show elevation gain subline", html.contains("Elev Gain -- m"))
+    }
+
+    @Test
+    fun `overlay includes compact mode for small screens`() {
+        assertTrue("Should define narrow mode breakpoints", html.contains("var NARROW_MAX_WIDTH = 840;"))
+        assertTrue("Should define narrow mode breakpoints", html.contains("var NARROW_MAX_HEIGHT = 620;"))
+        assertTrue("Should define compact mode breakpoints", html.contains("var COMPACT_MAX_WIDTH = 420;"))
+        assertTrue("Should define compact mode breakpoints", html.contains("var COMPACT_MAX_HEIGHT = 760;"))
+        assertTrue("Should update responsive mode on resize", html.contains("window.addEventListener('resize', updateResponsiveMode)"))
+        assertTrue("Should mark lower-priority cards as compact hidden", html.contains("compact-hidden"))
+        assertTrue("Should hide map in compact mode", html.contains("body.compact-mode .map-panel"))
+        assertTrue("Should support narrow mode class", html.contains("body.narrow-mode .overlay"))
+        assertTrue("Should resize map after mode changes", html.contains("map.invalidateSize()"))
     }
 }
