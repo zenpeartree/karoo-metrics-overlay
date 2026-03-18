@@ -8,7 +8,7 @@ The app runs a lightweight server directly on the Karoo. Point any browser or st
 
 ## Screenshot
 
-<img width="378" height="388" alt="image" src="https://github.com/user-attachments/assets/726a17fa-6cb4-4eed-8f74-a693b1c27098" />
+<img width="384" height="396" alt="image" src="https://github.com/user-attachments/assets/e8066c48-da1b-4b87-bb38-ac2d8f6ca352" />
 
 ## Metrics
 
