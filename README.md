@@ -96,11 +96,16 @@ The app runs a lightweight server directly on the Karoo. Point any browser or st
 
 1. In OBS: **Sources → Add → Browser**
 2. Set the URL to the address shown in the app
-3. Recommended size without map: **440 × 180**
-4. Recommended size with map enabled: **440 × 430**
-5. Position the overlay in your desired corner
-6. The background is transparent — the video feed shows through
-7. Start a ride on the Karoo — metrics update in real time
+3. Choose the viewer-targeted layout in the URL:
+   `?viewer=desktop` keeps the full desktop layout
+   `?viewer=mobile` forces the compact mobile layout
+4. Recommended size without map: **440 × 180**
+5. Recommended size with map enabled: **440 × 430**
+6. Position the overlay in your desired corner
+7. The background is transparent — the video feed shows through
+8. Start a ride on the Karoo — metrics update in real time
+
+The layout preset is now based on the audience you want to optimize for, not the streamer's local browser-source dimensions. If you skip the query parameter, the overlay defaults to the desktop viewer layout.
 
 ### Mobile Streaming Setup
 

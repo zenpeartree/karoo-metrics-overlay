@@ -140,7 +140,7 @@ class OverlayHtmlTest {
     }
 
     @Test
-    fun `overlay includes compact mode for small screens`() {
+    fun `overlay includes compact mode for explicit mobile viewer mode`() {
         assertTrue("Should define narrow mode breakpoints", html.contains("var NARROW_MAX_WIDTH = 840;"))
         assertTrue("Should define narrow mode breakpoints", html.contains("var NARROW_MAX_HEIGHT = 620;"))
         assertTrue("Should define compact mode breakpoints", html.contains("var COMPACT_MAX_WIDTH = 420;"))
@@ -150,5 +150,16 @@ class OverlayHtmlTest {
         assertTrue("Should hide map in compact mode", html.contains("body.compact-mode .map-panel"))
         assertTrue("Should support narrow mode class", html.contains("body.narrow-mode .overlay"))
         assertTrue("Should resize map after mode changes", html.contains("map.invalidateSize()"))
+    }
+
+    @Test
+    fun `overlay supports viewer driven layout overrides`() {
+        assertTrue("Should define desktop viewer mode", html.contains("var VIEWER_MODE_DESKTOP = 'desktop';"))
+        assertTrue("Should define mobile viewer mode", html.contains("var VIEWER_MODE_MOBILE = 'mobile';"))
+        assertTrue("Should parse viewer query parameter", html.contains("params.get('viewer')"))
+        assertTrue("Should support audience alias", html.contains("params.get('audience')"))
+        assertTrue("Should default to desktop layout", html.contains("return VIEWER_MODE_DESKTOP;"))
+        assertTrue("Should force desktop layout when requested", html.contains("if (viewerMode === VIEWER_MODE_DESKTOP)"))
+        assertTrue("Should force mobile layout when requested", html.contains("} else if (viewerMode === VIEWER_MODE_MOBILE)"))
     }
 }

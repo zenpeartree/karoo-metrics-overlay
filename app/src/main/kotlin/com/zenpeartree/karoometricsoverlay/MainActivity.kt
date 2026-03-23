@@ -34,6 +34,7 @@ class MainActivity : Activity() {
     private lateinit var statusText: TextView
     private lateinit var addressText: TextView
     private lateinit var errorText: TextView
+    private lateinit var infoText: TextView
     private lateinit var toggleButton: Button
     private lateinit var ftpInput: EditText
     private lateinit var maxHrInput: EditText
@@ -157,8 +158,8 @@ class MainActivity : Activity() {
         }
         layout.addView(toggleButton)
 
-        val infoText = TextView(this).apply {
-            text = "\nAdd the URL above as a Browser Source in OBS.\nWidth: 440, Height: 180"
+        infoText = TextView(this).apply {
+            text = "\nAdd the URL above as a Browser Source in OBS.\nUse ?viewer=desktop for desktop viewers or ?viewer=mobile for mobile viewers."
             textSize = 12f
             gravity = Gravity.CENTER
             setPadding(0, 16, 0, 0)
@@ -211,9 +212,23 @@ class MainActivity : Activity() {
     private fun updateUI() {
         if (OverlayService.isRunning) {
             statusText.text = "Running"
-            addressText.text = OverlayService.serverAddress ?: "Getting address..."
+            val baseAddress = OverlayService.serverAddress
+            addressText.text = if (baseAddress != null) {
+                buildString {
+                    append(baseAddress)
+                    append("\nDesktop viewers: ")
+                    append(baseAddress)
+                    append("?viewer=desktop")
+                    append("\nMobile viewers: ")
+                    append(baseAddress)
+                    append("?viewer=mobile")
+                }
+            } else {
+                "Getting address..."
+            }
             toggleButton.text = "Stop Server"
             errorText.text = ""
+            infoText.text = "\nUse the desktop or mobile viewer URL depending on who the stream is optimized for."
             ftpInput.isEnabled = false
             maxHrInput.isEnabled = false
             shareLocationInput.isEnabled = false
@@ -222,6 +237,7 @@ class MainActivity : Activity() {
             addressText.text = ""
             toggleButton.text = "Start Server"
             errorText.text = OverlayService.lastError ?: ""
+            infoText.text = "\nAdd the URL above as a Browser Source in OBS.\nUse ?viewer=desktop for desktop viewers or ?viewer=mobile for mobile viewers."
             ftpInput.isEnabled = true
             maxHrInput.isEnabled = true
             shareLocationInput.isEnabled = true

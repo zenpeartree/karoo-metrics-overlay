@@ -440,6 +440,8 @@
   var NARROW_MAX_HEIGHT = 620;
   var COMPACT_MAX_WIDTH = 420;
   var COMPACT_MAX_HEIGHT = 760;
+  var VIEWER_MODE_DESKTOP = 'desktop';
+  var VIEWER_MODE_MOBILE = 'mobile';
 
   var powerZones = [
     { name: 'Z1 Recovery', min: 0, max: 0.55, color: '#94a3b8' },
@@ -501,6 +503,7 @@
   var mapUnavailable = false;
   var narrowMode = false;
   var compactMode = false;
+  var viewerMode = VIEWER_MODE_DESKTOP;
   var updateTimers = {};
   var lastSnapshot = null;
 
@@ -534,15 +537,32 @@
     }
   }
 
+  function parseViewerMode() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var requestedMode = (params.get('viewer') || params.get('audience') || '').toLowerCase();
+      if (requestedMode === VIEWER_MODE_DESKTOP) {
+        return VIEWER_MODE_DESKTOP;
+      }
+      if (requestedMode === VIEWER_MODE_MOBILE) {
+        return VIEWER_MODE_MOBILE;
+      }
+    } catch (e) {}
+    return VIEWER_MODE_DESKTOP;
+  }
+
   function updateResponsiveMode() {
     var wasCompact = compactMode;
     var wasNarrow = narrowMode;
-    narrowMode = !compactMode && (window.innerWidth <= NARROW_MAX_WIDTH || window.innerHeight <= NARROW_MAX_HEIGHT);
-    compactMode = window.innerWidth <= COMPACT_MAX_WIDTH || window.innerHeight <= COMPACT_MAX_HEIGHT;
-    if (compactMode) {
+    if (viewerMode === VIEWER_MODE_DESKTOP) {
+      compactMode = false;
+      narrowMode = false;
+    } else if (viewerMode === VIEWER_MODE_MOBILE) {
+      compactMode = true;
       narrowMode = false;
     } else {
-      narrowMode = window.innerWidth <= NARROW_MAX_WIDTH || window.innerHeight <= NARROW_MAX_HEIGHT;
+      compactMode = false;
+      narrowMode = false;
     }
     document.body.classList.toggle('compact-mode', compactMode);
     document.body.classList.toggle('narrow-mode', narrowMode);
@@ -765,6 +785,7 @@
     };
   }
 
+  viewerMode = parseViewerMode();
   updateResponsiveMode();
   window.addEventListener('resize', updateResponsiveMode);
 
