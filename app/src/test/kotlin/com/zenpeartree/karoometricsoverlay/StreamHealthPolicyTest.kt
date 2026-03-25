@@ -12,7 +12,7 @@ class StreamHealthPolicyTest {
             StreamHealthPolicy.shouldRefresh(
                 now = 10_000L,
                 lastSubscriptionAt = 0L,
-                lastDataAt = 0L,
+                lastMetricDataAt = 0L,
                 initialDataTimeoutMs = 15_000L,
                 staleDataTimeoutMs = 15_000L,
             ),
@@ -25,7 +25,7 @@ class StreamHealthPolicyTest {
             StreamHealthPolicy.shouldRefresh(
                 now = 20_000L,
                 lastSubscriptionAt = 1_000L,
-                lastDataAt = 0L,
+                lastMetricDataAt = 0L,
                 initialDataTimeoutMs = 15_000L,
                 staleDataTimeoutMs = 15_000L,
             ),
@@ -38,7 +38,7 @@ class StreamHealthPolicyTest {
             StreamHealthPolicy.shouldRefresh(
                 now = 20_000L,
                 lastSubscriptionAt = 1_000L,
-                lastDataAt = 10_000L,
+                lastMetricDataAt = 10_000L,
                 initialDataTimeoutMs = 15_000L,
                 staleDataTimeoutMs = 15_000L,
             ),
@@ -51,7 +51,7 @@ class StreamHealthPolicyTest {
             StreamHealthPolicy.shouldRefresh(
                 now = 30_000L,
                 lastSubscriptionAt = 1_000L,
-                lastDataAt = 10_000L,
+                lastMetricDataAt = 10_000L,
                 initialDataTimeoutMs = 15_000L,
                 staleDataTimeoutMs = 15_000L,
             ),

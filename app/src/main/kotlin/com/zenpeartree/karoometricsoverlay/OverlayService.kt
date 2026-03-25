@@ -8,7 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import io.hammerhead.karooext.KarooSystemService
 
@@ -32,6 +34,8 @@ class OverlayService : Service() {
     private var karooSystem: KarooSystemService? = null
     private var metricsCollector: MetricsCollector? = null
     private var overlayServer: OverlayServer? = null
+    private val serviceHandler = Handler(Looper.getMainLooper())
+    private var reconnectInProgress = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -57,19 +61,23 @@ class OverlayService : Service() {
         val system = KarooSystemService(this)
         karooSystem = system
 
-        system.connect { connected ->
-            if (connected) {
-                Log.i(TAG, "Connected to Karoo System")
-                startServer(system)
-            } else {
-                handleConnectionFailure()
-            }
-        }
+        connectToKarooSystem(system, startServer = true)
 
         return START_STICKY
     }
 
-    private fun startServer(system: KarooSystemService) {
+    private fun connectToKarooSystem(system: KarooSystemService, startServer: Boolean) {
+        system.connect { connected ->
+            if (connected) {
+                Log.i(TAG, "Connected to Karoo System")
+                startOverlay(system, startServer)
+            } else {
+                handleConnectionFailure()
+            }
+        }
+    }
+
+    private fun startOverlay(system: KarooSystemService, startServer: Boolean) {
         try {
             val prefs = getSharedPreferences("karoo_overlay_prefs", Context.MODE_PRIVATE)
             val shareLocation = prefs.getBoolean(
@@ -77,23 +85,31 @@ class OverlayService : Service() {
                 MainActivity.DEFAULT_SHARE_LOCATION,
             )
 
-            val collector = MetricsCollector(system, shareLocation)
+            val collector = MetricsCollector(
+                karooSystem = system,
+                shareLocation = shareLocation,
+                onReconnectRequested = ::requestKarooReconnect,
+            )
             metricsCollector = collector
             collector.start()
 
-            val server = OverlayServer.getInstance(this)
-            overlayServer = server
-            server.start()
+            if (startServer) {
+                val server = OverlayServer.getInstance(this)
+                overlayServer = server
+                server.start()
+            }
 
             val addr = getServerAddress()
             serverAddress = addr
             isRunning = true
             lastError = null
+            reconnectInProgress = false
             updateNotification("Overlay running at $addr")
             Log.i(TAG, "=== OBS Overlay available at: $addr ===")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start overlay server", e)
             lastError = "Server failed: ${e.message}"
+            reconnectInProgress = false
             updateNotification("Failed: ${e.message}")
             // Clean up partial state so a retry is possible
             metricsCollector?.stop()
@@ -128,6 +144,7 @@ class OverlayService : Service() {
 
     private fun handleConnectionFailure() {
         Log.w(TAG, "Failed to connect to Karoo System")
+        reconnectInProgress = false
         lastError = "Karoo connection failed"
         serverAddress = null
         isRunning = false
@@ -135,6 +152,27 @@ class OverlayService : Service() {
         karooSystem = null
         updateNotification("Karoo connection failed")
         stopSelf()
+    }
+
+    private fun requestKarooReconnect(reason: String) {
+        serviceHandler.post {
+            if (reconnectInProgress) {
+                Log.i(TAG, "Karoo reconnect already in progress, ignoring request: $reason")
+                return@post
+            }
+            reconnectInProgress = true
+            Log.w(TAG, "Reconnecting to Karoo System after metric stall: $reason")
+            updateNotification("Recovering metric stream...")
+
+            metricsCollector?.stop()
+            metricsCollector = null
+            MetricsState.reset()
+
+            karooSystem?.disconnect()
+            val system = KarooSystemService(this)
+            karooSystem = system
+            connectToKarooSystem(system, startServer = false)
+        }
     }
 
     @Suppress("DEPRECATION")

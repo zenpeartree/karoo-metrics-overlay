@@ -11,6 +11,7 @@ import io.hammerhead.karooext.models.StreamState
 class MetricsCollector(
     private val karooSystem: KarooSystemService,
     private val shareLocation: Boolean,
+    private val onReconnectRequested: (String) -> Unit = {},
 ) {
 
     companion object {
@@ -29,9 +30,10 @@ class MetricsCollector(
     private var watchdogHandler: Handler? = null
     private var started = false
     private var refreshPending = false
+    private var refreshAttempts = 0
 
     @Volatile
-    private var lastDataAt = 0L
+    private var lastMetricDataAt = 0L
 
     @Volatile
     private var lastSubscriptionAt = 0L
@@ -50,7 +52,8 @@ class MetricsCollector(
                 return
             }
             started = true
-            lastDataAt = 0L
+            lastMetricDataAt = 0L
+            refreshAttempts = 0
             startWatchdogLocked()
             subscribeAllLocked()
         }
@@ -63,8 +66,9 @@ class MetricsCollector(
             refreshPending = false
             stopWatchdogLocked()
             unsubscribeAllLocked()
-            lastDataAt = 0L
+            lastMetricDataAt = 0L
             lastSubscriptionAt = 0L
+            refreshAttempts = 0
             Log.i(TAG, "Stopped collecting metrics")
         }
     }
@@ -78,7 +82,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.SPEED]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateSpeed(value * MS_TO_KMH)
                     }
                 }
@@ -97,7 +101,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.POWER]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updatePower(value.toInt())
                     }
                 }
@@ -116,7 +120,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.AVERAGE_SPEED]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateAvgSpeed(value * MS_TO_KMH)
                     }
                 }
@@ -135,7 +139,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.HEART_RATE]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateHeartRate(value.toInt())
                     }
                 }
@@ -154,7 +158,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.DISTANCE]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateDistance(value * M_TO_KM)
                     }
                 }
@@ -173,7 +177,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.ELEVATION_GRADE]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateGrade(value)
                     }
                 }
@@ -192,7 +196,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.AVERAGE_POWER]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateAvgPower(value.toInt())
                     }
                 }
@@ -211,7 +215,7 @@ class MetricsCollector(
                 is StreamState.Streaming -> {
                     val value = state.dataPoint.values[DataType.Field.ELEVATION_GAIN]
                     if (value != null) {
-                        markDataReceived()
+                        markMetricDataReceived()
                         MetricsState.updateElevationGain(value)
                     }
                 }
@@ -231,7 +235,6 @@ class MetricsCollector(
                     val lat = state.dataPoint.values[DataType.Field.LOC_LATITUDE]
                     val lng = state.dataPoint.values[DataType.Field.LOC_LONGITUDE]
                     if (lat != null && lng != null) {
-                        markDataReceived()
                         MetricsState.updateLocation(lat, lng)
                     }
                 }
@@ -287,7 +290,7 @@ class MetricsCollector(
                 StreamHealthPolicy.shouldRefresh(
                     now = now,
                     lastSubscriptionAt = lastSubscriptionAt,
-                    lastDataAt = lastDataAt,
+                    lastMetricDataAt = lastMetricDataAt,
                     initialDataTimeoutMs = INITIAL_DATA_TIMEOUT_MS,
                     staleDataTimeoutMs = STALE_DATA_TIMEOUT_MS,
                 )
@@ -298,8 +301,11 @@ class MetricsCollector(
         }
     }
 
-    private fun markDataReceived() {
-        lastDataAt = System.currentTimeMillis()
+    private fun markMetricDataReceived() {
+        synchronized(lock) {
+            lastMetricDataAt = System.currentTimeMillis()
+            refreshAttempts = 0
+        }
     }
 
     private fun handleStreamError(streamName: String, error: Any?) {
@@ -326,11 +332,20 @@ class MetricsCollector(
     }
 
     private fun refreshSubscriptions(reason: String) {
+        var shouldReconnect = false
         synchronized(lock) {
             refreshPending = false
             if (!started) return
-            Log.w(TAG, "Refreshing metric subscriptions: $reason")
-            subscribeAllLocked()
+            refreshAttempts += 1
+            shouldReconnect = refreshAttempts >= 2
+            if (!shouldReconnect) {
+                Log.w(TAG, "Refreshing metric subscriptions: $reason")
+                subscribeAllLocked()
+            }
+        }
+        if (shouldReconnect) {
+            Log.w(TAG, "Escalating to Karoo reconnect after repeated refresh failures: $reason")
+            onReconnectRequested(reason)
         }
     }
 }
@@ -339,14 +354,14 @@ internal object StreamHealthPolicy {
     fun shouldRefresh(
         now: Long,
         lastSubscriptionAt: Long,
-        lastDataAt: Long,
+        lastMetricDataAt: Long,
         initialDataTimeoutMs: Long,
         staleDataTimeoutMs: Long,
     ): Boolean {
         if (lastSubscriptionAt <= 0L) return false
-        if (lastDataAt <= 0L) {
+        if (lastMetricDataAt <= 0L) {
             return now - lastSubscriptionAt >= initialDataTimeoutMs
         }
-        return now - lastDataAt >= staleDataTimeoutMs
+        return now - lastMetricDataAt >= staleDataTimeoutMs
     }
 }
