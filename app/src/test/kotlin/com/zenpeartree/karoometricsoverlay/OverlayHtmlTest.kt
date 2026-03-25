@@ -140,26 +140,18 @@ class OverlayHtmlTest {
     }
 
     @Test
-    fun `overlay includes compact mode for explicit mobile viewer mode`() {
-        assertTrue("Should define narrow mode breakpoints", html.contains("var NARROW_MAX_WIDTH = 840;"))
-        assertTrue("Should define narrow mode breakpoints", html.contains("var NARROW_MAX_HEIGHT = 620;"))
-        assertTrue("Should define compact mode breakpoints", html.contains("var COMPACT_MAX_WIDTH = 420;"))
-        assertTrue("Should define compact mode breakpoints", html.contains("var COMPACT_MAX_HEIGHT = 760;"))
-        assertTrue("Should update responsive mode on resize", html.contains("window.addEventListener('resize', updateResponsiveMode)"))
-        assertTrue("Should mark lower-priority cards as compact hidden", html.contains("compact-hidden"))
-        assertTrue("Should hide map in compact mode", html.contains("body.compact-mode .map-panel"))
-        assertTrue("Should support narrow mode class", html.contains("body.narrow-mode .overlay"))
-        assertTrue("Should resize map after mode changes", html.contains("map.invalidateSize()"))
+    fun `overlay keeps desktop layout only`() {
+        assertTrue("Should keep the desktop metrics shell", html.contains(".metrics-shell"))
+        assertTrue("Should keep the desktop three-column grid", html.contains("grid-template-columns: repeat(3, 1fr);"))
+        assertTrue("Should always render distance card", html.contains("<div class=\"metric-card distance\">"))
+        assertTrue("Should always render avg power card", html.contains("<div class=\"metric-card avg-power\">"))
     }
 
     @Test
-    fun `overlay supports viewer driven layout overrides`() {
-        assertTrue("Should define desktop viewer mode", html.contains("var VIEWER_MODE_DESKTOP = 'desktop';"))
-        assertTrue("Should define mobile viewer mode", html.contains("var VIEWER_MODE_MOBILE = 'mobile';"))
-        assertTrue("Should parse viewer query parameter", html.contains("params.get('viewer')"))
-        assertTrue("Should support audience alias", html.contains("params.get('audience')"))
-        assertTrue("Should default to desktop layout", html.contains("return VIEWER_MODE_DESKTOP;"))
-        assertTrue("Should force desktop layout when requested", html.contains("if (viewerMode === VIEWER_MODE_DESKTOP)"))
-        assertTrue("Should force mobile layout when requested", html.contains("} else if (viewerMode === VIEWER_MODE_MOBILE)"))
+    fun `overlay no longer includes mobile viewer overrides`() {
+        assertTrue("Should not contain compact mode CSS", !html.contains("compact-mode"))
+        assertTrue("Should not contain narrow mode CSS", !html.contains("narrow-mode"))
+        assertTrue("Should not parse viewer query parameters", !html.contains("params.get('viewer')"))
+        assertTrue("Should not define a mobile viewer mode", !html.contains("VIEWER_MODE_MOBILE"))
     }
 }
