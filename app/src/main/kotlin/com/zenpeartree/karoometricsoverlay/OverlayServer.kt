@@ -187,6 +187,10 @@ class OverlayServer private constructor(
                 MainActivity.KEY_SUBSCRIBE_HR,
                 MainActivity.DEFAULT_SUBSCRIBE_HR,
             )
+            val subscribeCadence = prefs.getBoolean(
+                MainActivity.KEY_SUBSCRIBE_CADENCE,
+                MainActivity.DEFAULT_SUBSCRIBE_CADENCE,
+            )
 
             val injected = template
                 .replace("var FTP = 250;", "var FTP = $ftp;")
@@ -194,11 +198,12 @@ class OverlayServer private constructor(
                 .replace("var SHOW_MAP = false;", "var SHOW_MAP = $shareLocation;")
                 .replace("var SHOW_POWER = true;", "var SHOW_POWER = $subscribePower;")
                 .replace("var SHOW_HR = true;", "var SHOW_HR = $subscribeHeartRate;")
+                .replace("var SHOW_CADENCE = true;", "var SHOW_CADENCE = $subscribeCadence;")
 
             overlayHtml = injected.toByteArray(StandardCharsets.UTF_8)
             DiagnosticEvents.record(
                 TAG,
-                "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr, SHOW_MAP=$shareLocation, SHOW_POWER=$subscribePower, SHOW_HR=$subscribeHeartRate",
+                "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr, SHOW_MAP=$shareLocation, SHOW_POWER=$subscribePower, SHOW_HR=$subscribeHeartRate, SHOW_CADENCE=$subscribeCadence",
             )
         } catch (e: IOException) {
             Log.e(TAG, "Failed to load overlay.html", e)

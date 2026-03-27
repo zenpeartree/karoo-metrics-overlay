@@ -44,6 +44,14 @@ class SettingsTest {
             "Power and HR subscription keys must be different",
             MainActivity.KEY_SUBSCRIBE_POWER != MainActivity.KEY_SUBSCRIBE_HR,
         )
+        assertTrue(
+            "Cadence subscription key must be different from power key",
+            MainActivity.KEY_SUBSCRIBE_CADENCE != MainActivity.KEY_SUBSCRIBE_POWER,
+        )
+        assertTrue(
+            "Cadence subscription key must be different from HR key",
+            MainActivity.KEY_SUBSCRIBE_CADENCE != MainActivity.KEY_SUBSCRIBE_HR,
+        )
     }
 
     @Test
@@ -52,9 +60,10 @@ class SettingsTest {
     }
 
     @Test
-    fun `power and hr subscriptions default to enabled`() {
+    fun `power hr and cadence subscriptions default to enabled`() {
         assertEquals(true, MainActivity.DEFAULT_SUBSCRIBE_POWER)
         assertEquals(true, MainActivity.DEFAULT_SUBSCRIBE_HR)
+        assertEquals(true, MainActivity.DEFAULT_SUBSCRIBE_CADENCE)
     }
 
     @Test
@@ -94,6 +103,10 @@ class SettingsTest {
         assertTrue(
             "overlay.html default SHOW_HR should be present for replacement",
             html.contains("var SHOW_HR = true;"),
+        )
+        assertTrue(
+            "overlay.html default SHOW_CADENCE should be present for replacement",
+            html.contains("var SHOW_CADENCE = true;"),
         )
     }
 }

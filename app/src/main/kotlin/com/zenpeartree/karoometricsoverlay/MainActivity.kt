@@ -27,11 +27,13 @@ class MainActivity : Activity() {
         const val KEY_SHARE_LOCATION = "share_location"
         const val KEY_SUBSCRIBE_POWER = "subscribe_power"
         const val KEY_SUBSCRIBE_HR = "subscribe_hr"
+        const val KEY_SUBSCRIBE_CADENCE = "subscribe_cadence"
         const val DEFAULT_FTP = 200
         const val DEFAULT_MAX_HR = 190
         const val DEFAULT_SHARE_LOCATION = false
         const val DEFAULT_SUBSCRIBE_POWER = true
         const val DEFAULT_SUBSCRIBE_HR = true
+        const val DEFAULT_SUBSCRIBE_CADENCE = true
     }
 
     private lateinit var prefs: SharedPreferences
@@ -45,6 +47,7 @@ class MainActivity : Activity() {
     private lateinit var shareLocationInput: CheckBox
     private lateinit var subscribePowerInput: CheckBox
     private lateinit var subscribeHeartRateInput: CheckBox
+    private lateinit var subscribeCadenceInput: CheckBox
     private val handler = Handler(Looper.getMainLooper())
 
     private val uiUpdater = object : Runnable {
@@ -146,6 +149,13 @@ class MainActivity : Activity() {
         }
         layout.addView(subscribeHeartRateInput)
 
+        subscribeCadenceInput = CheckBox(this).apply {
+            text = "Subscribe to cadence field"
+            isChecked = prefs.getBoolean(KEY_SUBSCRIBE_CADENCE, DEFAULT_SUBSCRIBE_CADENCE)
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(subscribeCadenceInput)
+
         // --- Status ---
         statusText = TextView(this).apply {
             text = "Stopped"
@@ -210,6 +220,7 @@ class MainActivity : Activity() {
             .putBoolean(KEY_SHARE_LOCATION, shareLocationInput.isChecked)
             .putBoolean(KEY_SUBSCRIBE_POWER, subscribePowerInput.isChecked)
             .putBoolean(KEY_SUBSCRIBE_HR, subscribeHeartRateInput.isChecked)
+            .putBoolean(KEY_SUBSCRIBE_CADENCE, subscribeCadenceInput.isChecked)
             .apply()
     }
 
@@ -248,6 +259,7 @@ class MainActivity : Activity() {
             shareLocationInput.isEnabled = false
             subscribePowerInput.isEnabled = false
             subscribeHeartRateInput.isEnabled = false
+            subscribeCadenceInput.isEnabled = false
         } else {
             statusText.text = "Stopped"
             addressText.text = ""
@@ -259,6 +271,7 @@ class MainActivity : Activity() {
             shareLocationInput.isEnabled = true
             subscribePowerInput.isEnabled = true
             subscribeHeartRateInput.isEnabled = true
+            subscribeCadenceInput.isEnabled = true
         }
     }
 }

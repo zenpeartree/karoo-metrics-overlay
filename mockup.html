@@ -3,362 +3,158 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Karoo Metrics Overlay - Visual Mockup</title>
+<title>Karoo Metrics Overlay - POV Mockup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --shell-bg: rgba(8, 12, 16, 0.72);
-    --shell-border: rgba(255, 255, 255, 0.1);
-    --shell-glow: rgba(20, 184, 166, 0.22);
-    --text-main: #f7fbfc;
-    --text-soft: rgba(247, 251, 252, 0.72);
-    --text-dim: rgba(247, 251, 252, 0.4);
-    --power: #f5c542;
-    --hr: #3ddc97;
-    --climb: #ff6b57;
-    --descent: #58c4dd;
-    --neutral: #dce7eb;
-    --accent: #17c6b5;
-    --map-shadow: rgba(0, 0, 0, 0.34);
+    --text-main: rgba(255, 255, 255, 0.96);
+    --text-soft: rgba(255, 255, 255, 0.84);
+    --text-dim: rgba(255, 255, 255, 0.62);
+    --panel-shadow: rgba(0, 0, 0, 0.18);
+    --power: #f6ca52;
+    --hr: #58dfa2;
   }
-
   * { box-sizing: border-box; }
-
-  html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
   body {
     font-family: 'IBM Plex Sans', sans-serif;
     color: var(--text-main);
     background:
-      radial-gradient(circle at top left, rgba(23, 198, 181, 0.2), transparent 28%),
-      radial-gradient(circle at top right, rgba(245, 197, 66, 0.16), transparent 24%),
-      linear-gradient(135deg, rgba(15, 24, 31, 0.78), rgba(4, 8, 12, 0.5)),
-      url('Cyclist POV 046.jpg') center/cover no-repeat;
+      linear-gradient(180deg, rgba(12, 18, 24, 0.04), rgba(8, 12, 16, 0.16)),
+      url('Pov Cycling at Sunset.png') center/cover no-repeat;
   }
-
-  .overlay {
-    position: fixed;
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
+  .hud {
+    position: absolute;
+    left: 24px;
+    top: 24px;
+    bottom: 18px;
+    width: 180px;
     display: flex;
-    align-items: flex-end;
+    flex-direction: column;
     justify-content: space-between;
-    gap: 10px;
   }
-
-  .metrics-shell {
-    position: relative;
-    width: 351px;
-    display: grid;
-    gap: 7px;
-  }
-
+  .hud-top, .metrics-shell, .speed-shell, .secondary-shell, .terrain-panel, .grade-shell { display: grid; }
+  .hud-top, .metrics-shell { gap: 18px; }
+  .secondary-shell { gap: 12px; width: 132px; }
   .map-panel {
-    position: relative;
-    width: 160px;
-    padding: 6px;
-    border-radius: 16px;
-    background: linear-gradient(180deg, rgba(11, 17, 21, 0.72), rgba(6, 10, 14, 0.58));
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      0 18px 42px rgba(0, 0, 0, 0.26),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(18px);
+    width: 146px; padding: 8px; border-radius: 3px;
+    background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(6px); box-shadow: 0 16px 32px var(--panel-shadow);
   }
-
-  .map-shell {
-    position: relative;
-    width: 100%;
-    height: 109px;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  }
-
+  .map-shell { position: relative; width: 100%; aspect-ratio: 1 / 0.94; overflow: hidden; }
   .map-gradient {
-    position: absolute;
-    inset: 0;
-    z-index: 450;
-    pointer-events: none;
+    position: absolute; inset: 0; z-index: 450; pointer-events: none;
     background:
-      linear-gradient(180deg, rgba(4, 8, 12, 0.2), transparent 35%),
-      linear-gradient(0deg, rgba(4, 8, 12, 0.48), transparent 30%);
+      linear-gradient(180deg, rgba(255,255,255,0.12), transparent 34%),
+      linear-gradient(0deg, rgba(0,0,0,0.18), transparent 28%);
   }
-
-  #map {
-    width: 100%;
-    height: 100%;
-    filter: saturate(0.85) contrast(1.05) brightness(0.92);
+  #map { width: 100%; height: 100%; filter: saturate(0.78) contrast(1.04) brightness(0.96); }
+  .metric-block, .speed-shell, .terrain-panel {
+    display: grid; gap: 3px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.32), 0 6px 20px rgba(0,0,0,0.18);
   }
-
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 7px;
-  }
-
-  .metrics-grid > .metric-card {
-    grid-column: span 2;
-  }
-
-  .metrics-grid > .metric-card:nth-child(-n+2) {
-    grid-column: span 3;
-  }
-
-  .metric-card {
-    position: relative;
-    min-height: 89px;
-    padding: 11px 11px 9px;
-    border-radius: 14px;
-    background: var(--shell-bg);
-    border: 1px solid var(--shell-border);
-    backdrop-filter: blur(16px);
-    box-shadow:
-      0 16px 40px rgba(0, 0, 0, 0.22),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    overflow: hidden;
-  }
-
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 3px;
-    background: var(--accent);
-    opacity: 0.9;
-  }
-
-  .metric-card.power::before { background: var(--power); }
-  .metric-card.hr::before { background: var(--hr); }
-  .metric-card.grade::before { background: var(--climb); }
-  .metric-card.speed::before { background: #6ebaff; }
-  .metric-card.distance::before { background: #a78bfa; }
-
   .metric-label {
-    margin-bottom: 6px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-dim);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px; font-weight: 700; line-height: 0.92; letter-spacing: 0.05em; text-transform: uppercase;
   }
-
-  .metric-main {
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
-  }
-
   .metric-value {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    line-height: 0.88;
-    letter-spacing: 0.02em;
+    font-size: 62px; font-weight: 700; line-height: 0.82; letter-spacing: 0.01em; font-variant-numeric: tabular-nums;
   }
-
-  .metric-unit {
-    padding-bottom: 4px;
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text-soft);
-  }
-
+  .metric-value.compact { font-size: 44px; }
   .metric-sub {
-    margin-top: 7px;
-    min-height: 14px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-soft);
+    min-height: 13px; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim);
   }
-
-  .bar-track {
-    margin-top: 7px;
-    height: 4px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
+  .zone-bar { width: 72px; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden; }
+  .zone-bar-fill { height: 100%; border-radius: inherit; }
+  .grade-shell { gap: 4px; width: 172px; }
+  .grade-track { position: relative; width: 100%; height: 18px; }
+  .grade-track::before {
+    content: ''; position: absolute; left: 2px; right: 22px; bottom: 7px;
+    border-top: 2px solid rgba(255,255,255,0.82); transform: skewX(34deg); transform-origin: left bottom;
   }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: inherit;
+  .grade-main { display: flex; align-items: flex-end; gap: 6px; }
+  .grade-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 58px; font-weight: 700; line-height: 0.84; letter-spacing: 0.01em;
   }
-
-  .power .metric-value,
-  .power .metric-sub { color: var(--power); }
-
-  .hr .metric-value,
-  .hr .metric-sub { color: var(--hr); }
-
-  .grade .metric-value.climb { color: var(--climb); }
-
-  .leaflet-control-attribution,
-  .leaflet-control-zoom {
-    display: none;
+  .grade-unit {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px; font-weight: 700; line-height: 1; padding-bottom: 6px; text-transform: uppercase;
   }
-
+  .ride-meta { display: flex; flex-wrap: wrap; gap: 7px 12px; width: 240px; }
+  .meta-chip { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft); }
+  .meta-chip strong { color: var(--text-main); }
+  .leaflet-control-attribution, .leaflet-control-zoom { display: none; }
   .rider-dot {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #d4fff5, #17c6b5 60%, #0b766d 100%);
-    border: 2px solid rgba(255, 255, 255, 0.9);
-    box-shadow:
-      0 0 0 8px rgba(23, 198, 181, 0.12),
-      0 0 24px rgba(23, 198, 181, 0.42);
-  }
-
-  @media (max-width: 700px) {
-    .overlay {
-      left: 12px;
-      right: 12px;
-      bottom: 12px;
-      display: grid;
-    }
-
-    .metrics-shell,
-    .map-panel {
-      width: auto;
-    }
-
-    .metrics-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
+    width: 18px; height: 18px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f7fffd, #25d6c4 56%, #0b766d 100%);
+    border: 2px solid rgba(255,255,255,0.92);
+    box-shadow: 0 0 0 7px rgba(23,198,181,0.12), 0 0 18px rgba(23,198,181,0.24);
   }
 </style>
 </head>
 <body>
-  <section class="overlay">
-    <div class="metrics-shell">
-      <div class="metrics-grid">
-        <article class="metric-card power">
-          <div class="metric-label">Power</div>
-          <div class="metric-main">
-            <div class="metric-value">247</div>
-            <div class="metric-unit">W</div>
+  <div class="hud">
+    <div class="hud-top">
+      <div class="map-panel">
+        <div class="map-shell">
+          <div class="map-gradient"></div>
+          <div id="map"></div>
+        </div>
+      </div>
+      <div class="metrics-shell">
+        <div class="speed-shell">
+          <div class="metric-label">KM/H</div>
+          <div class="metric-value">68</div>
+          <div class="metric-sub">Avg 41.2 km/h</div>
+        </div>
+        <div class="secondary-shell">
+          <div class="metric-block">
+            <div class="metric-label">Power</div>
+            <div class="metric-value compact" style="color: var(--power);">0</div>
+            <div class="zone-bar"><div class="zone-bar-fill" style="width:0%; background: linear-gradient(90deg, #eab308, rgba(255,255,255,0.95));"></div></div>
+            <div class="metric-sub" style="color: var(--power);">Coasting</div>
+            <div class="metric-sub">Avg 238 W</div>
           </div>
-          <div class="bar-track"><div class="bar-fill" style="width:85%; background: linear-gradient(90deg, #e8bb3d, #f7dc80);"></div></div>
-          <div class="metric-sub">Z4 Threshold</div>
-          <div class="metric-sub">Avg 218 W</div>
-        </article>
-
-        <article class="metric-card hr">
-          <div class="metric-label">Heart Rate</div>
-          <div class="metric-main">
-            <div class="metric-value">156</div>
-            <div class="metric-unit">bpm</div>
+          <div class="metric-block">
+            <div class="metric-label">HR</div>
+            <div class="metric-value compact" style="color: var(--hr);">157</div>
+            <div class="zone-bar"><div class="zone-bar-fill" style="width:64%; background: linear-gradient(90deg, #22c55e, rgba(255,255,255,0.95));"></div></div>
+            <div class="metric-sub" style="color: var(--hr);">Z3 Tempo</div>
           </div>
-          <div class="bar-track"><div class="bar-fill" style="width:60%; background: linear-gradient(90deg, #26c880, #78efbc);"></div></div>
-          <div class="metric-sub">Z3 Tempo</div>
-        </article>
-
-        <article class="metric-card speed">
-          <div class="metric-label">Speed</div>
-          <div class="metric-main">
-            <div class="metric-value">28.4</div>
-            <div class="metric-unit">km/h</div>
+          <div class="metric-block">
+            <div class="metric-label">Cadence</div>
+            <div class="metric-value compact">0</div>
           </div>
-          <div class="metric-sub">Avg 26.1 km/h</div>
-        </article>
-
-        <article class="metric-card distance">
-          <div class="metric-label">Distance</div>
-          <div class="metric-main">
-            <div class="metric-value">42.7</div>
-            <div class="metric-unit">km</div>
-          </div>
-          <div class="metric-sub"></div>
-        </article>
-
-        <article class="metric-card grade">
-          <div class="metric-label">Grade</div>
-          <div class="metric-main">
-            <div class="metric-value climb">+4.2</div>
-            <div class="metric-unit">%</div>
-          </div>
-          <div class="metric-sub">Elev Gain 812 m</div>
-        </article>
+        </div>
       </div>
     </div>
-
-    <div class="map-panel">
-      <div class="map-shell">
-        <div class="map-gradient"></div>
-        <div id="map"></div>
+    <div class="terrain-panel">
+      <div class="grade-shell">
+        <div class="grade-track"></div>
+        <div class="grade-main">
+          <div class="grade-value">-8</div>
+          <div class="grade-unit">%</div>
+        </div>
+      </div>
+      <div class="ride-meta">
+        <div class="meta-chip"><strong>38.6</strong> km</div>
+        <div class="meta-chip">Avg 41.2 km/h</div>
+        <div class="meta-chip">Avg 238 W</div>
       </div>
     </div>
-  </section>
-
+  </div>
 <script>
-  var routePoints = [
-    [38.7870, -9.3900], [38.7865, -9.3920], [38.7858, -9.3942],
-    [38.7850, -9.3960], [38.7842, -9.3980], [38.7835, -9.4000],
-    [38.7828, -9.4018], [38.7820, -9.4038], [38.7812, -9.4055],
-    [38.7805, -9.4075], [38.7798, -9.4095], [38.7790, -9.4112],
-    [38.7782, -9.4130], [38.7775, -9.4148], [38.7768, -9.4168],
-    [38.7760, -9.4185], [38.7752, -9.4202], [38.7745, -9.4220],
-    [38.7738, -9.4238], [38.7730, -9.4255], [38.7722, -9.4272],
-    [38.7715, -9.4290], [38.7708, -9.4308], [38.7700, -9.4325]
-  ];
-
-  var currentIndex = 14;
-
-  var map = L.map('map', {
-    zoomControl: false,
-    attributionControl: false,
-    dragging: false,
-    scrollWheelZoom: false,
-    doubleClickZoom: false,
-    touchZoom: false
-  }).setView(routePoints[currentIndex], 11);
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19
-  }).addTo(map);
-
-  L.polyline(routePoints.slice(0, currentIndex + 1), {
-    color: '#17c6b5',
-    weight: 4,
-    opacity: 0.95
-  }).addTo(map);
-
-  L.polyline(routePoints.slice(currentIndex), {
-    color: '#c9f7f2',
-    weight: 2,
-    opacity: 0.3,
-    dashArray: '6 8'
-  }).addTo(map);
-
-  var riderIcon = L.divIcon({
-    className: '',
-    html: '<div class="rider-dot"></div>',
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
-  });
-
-  var riderMarker = L.marker(routePoints[currentIndex], { icon: riderIcon }).addTo(map);
-
-  setInterval(function() {
-    currentIndex = (currentIndex + 1) % routePoints.length;
-    var pos = routePoints[currentIndex];
-    riderMarker.setLatLng(pos);
-    map.panTo(pos, { animate: true, duration: 1.2 });
-  }, 2400);
+  var map = L.map('map', { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false }).setView([46.497, 9.838], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  L.polyline([[46.4986, 9.8138],[46.4994, 9.8194],[46.4996, 9.8252],[46.4982, 9.8318],[46.497, 9.838]], { color: '#ffffff', weight: 4, opacity: 0.92 }).addTo(map);
+  var riderIcon = L.divIcon({ className: '', html: '<div class="rider-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+  L.marker([46.497, 9.838], { icon: riderIcon }).addTo(map);
 </script>
 </body>
 </html>

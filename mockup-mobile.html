@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Karoo Metrics Overlay - Mobile Mockup</title>
+<title>Karoo Metrics Overlay - Mobile POV Mockup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,258 +11,140 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --shell-bg: rgba(8, 12, 16, 0.6);
-    --shell-border: rgba(255, 255, 255, 0.09);
-    --shell-shadow: rgba(0, 0, 0, 0.28);
-    --text-main: #f5f8fa;
-    --text-soft: rgba(245, 248, 250, 0.78);
-    --text-dim: rgba(245, 248, 250, 0.44);
-    --power: #f2c44d;
-    --hr: #37d48a;
-    --climb: #ff6a56;
-    --neutral: rgba(245, 248, 250, 0.92);
-    --speed: #6fb8ff;
-    --distance: #9e8bff;
+    --text-main: rgba(255, 255, 255, 0.96);
+    --text-soft: rgba(255, 255, 255, 0.84);
+    --text-dim: rgba(255, 255, 255, 0.62);
+    --power: #f6ca52;
+    --hr: #58dfa2;
   }
-
   * { box-sizing: border-box; }
-
-  html, body {
-    margin: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-  }
-
+  html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
   body {
-    display: grid;
-    place-items: center;
-    background:
-      radial-gradient(circle at top left, rgba(23, 198, 181, 0.12), transparent 28%),
-      radial-gradient(circle at bottom right, rgba(111, 184, 255, 0.12), transparent 30%),
-      linear-gradient(180deg, #0f161c, #090d11);
-    font-family: 'IBM Plex Sans', sans-serif;
-    color: var(--text-main);
+    display: grid; place-items: center;
+    background: radial-gradient(circle at top left, rgba(23,198,181,0.12), transparent 28%), radial-gradient(circle at bottom right, rgba(111,184,255,0.12), transparent 30%), linear-gradient(180deg, #0f161c, #090d11);
+    font-family: 'IBM Plex Sans', sans-serif; color: var(--text-main);
   }
-
   .phone {
-    position: relative;
-    width: min(390px, 92vw);
-    aspect-ratio: 9 / 19.5;
-    padding: 14px;
-    border-radius: 38px;
-    background: #05080b;
-    box-shadow:
-      0 40px 80px rgba(0, 0, 0, 0.5),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    position: relative; width: min(390px, 92vw); aspect-ratio: 9 / 19.5; padding: 14px; border-radius: 38px; background: #05080b;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.06);
   }
-
   .phone::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 34%;
-    height: 24px;
-    border-radius: 0 0 16px 16px;
-    background: #05080b;
-    z-index: 5;
+    content: ''; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 34%; height: 24px; border-radius: 0 0 16px 16px; background: #05080b; z-index: 5;
   }
-
   .screen {
-    position: relative;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    border-radius: 28px;
-    background:
-      linear-gradient(180deg, rgba(10, 15, 19, 0.08), rgba(10, 15, 19, 0.34)),
-      url('Cyclist POV 046.jpg') center/cover no-repeat;
+    position: relative; width: 100%; height: 100%; overflow: hidden; border-radius: 28px;
+    background: linear-gradient(180deg, rgba(10,15,19,0.08), rgba(10,15,19,0.3)), url('Pov Cycling at Sunset.png') center/cover no-repeat;
   }
-
-  .screen::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(180deg, rgba(4, 8, 12, 0.04), transparent 30%, transparent 62%, rgba(4, 8, 12, 0.14)),
-      radial-gradient(circle at top center, rgba(255, 255, 255, 0.06), transparent 20%);
-    pointer-events: none;
+  .hud {
+    position: absolute; left: 14px; top: 14px; bottom: 12px; width: 132px; display: flex; flex-direction: column; justify-content: space-between;
   }
-
-  .overlay {
-    position: absolute;
-    inset: 0;
-    padding: 14px 10px 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 7px;
+  .hud-top, .metrics-shell, .speed-shell, .secondary-shell, .terrain-panel, .grade-shell { display: grid; }
+  .hud-top, .metrics-shell { gap: 14px; }
+  .secondary-shell { gap: 9px; width: 112px; }
+  .map-panel {
+    width: 102px; padding: 6px; border-radius: 3px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(6px);
   }
-
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 7px;
+  .map-shell { position: relative; width: 100%; aspect-ratio: 1 / 0.94; overflow: hidden; }
+  .map-gradient {
+    position: absolute; inset: 0; z-index: 450; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12), transparent 34%), linear-gradient(0deg, rgba(0,0,0,0.18), transparent 28%);
   }
-
-  .metrics-grid > .metric-card {
-    grid-column: span 2;
+  #map { width: 100%; height: 100%; filter: saturate(0.78) contrast(1.04) brightness(0.96); }
+  .metric-block, .speed-shell, .terrain-panel {
+    display: grid; gap: 2px; text-shadow: 0 1px 2px rgba(0,0,0,0.34), 0 6px 20px rgba(0,0,0,0.2);
   }
-
-  .metrics-grid > .metric-card:nth-child(-n+2) {
-    grid-column: span 3;
-  }
-
-  .metric-card {
-    position: relative;
-    min-height: 89px;
-    padding: 11px 11px 9px;
-    border-radius: 14px;
-    background: var(--shell-bg);
-    border: 1px solid var(--shell-border);
-    backdrop-filter: blur(14px);
-    box-shadow:
-      0 14px 28px var(--shell-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    overflow: hidden;
-  }
-
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-  }
-
-  .metric-card.power::before { background: var(--power); }
-  .metric-card.hr::before { background: var(--hr); }
-  .metric-card.grade::before { background: var(--climb); }
-  .metric-card.speed::before { background: var(--speed); }
-  .metric-card.distance::before { background: var(--distance); }
-
   .metric-label {
-    margin-bottom: 6px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--text-dim);
+    font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 700; line-height: 0.92; letter-spacing: 0.05em; text-transform: uppercase;
   }
-
-  .metric-main {
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
-  }
-
   .metric-value {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    line-height: 0.88;
-    letter-spacing: 0.02em;
+    font-family: 'Barlow Condensed', sans-serif; font-size: 40px; font-weight: 700; line-height: 0.82; letter-spacing: 0.01em; font-variant-numeric: tabular-nums;
   }
-
-  .metric-unit {
-    padding-bottom: 4px;
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text-soft);
-  }
-
+  .metric-value.compact { font-size: 31px; }
   .metric-sub {
-    margin-top: 7px;
-    min-height: 14px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-soft);
+    min-height: 10px; font-size: 8px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-dim);
   }
-
-  .bar-track {
-    margin-top: 7px;
-    height: 4px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
+  .zone-bar { width: 54px; height: 3px; border-radius: 999px; background: rgba(255,255,255,0.16); overflow: hidden; }
+  .zone-bar-fill { height: 100%; border-radius: inherit; }
+  .grade-shell { gap: 3px; width: 120px; }
+  .grade-track { position: relative; width: 100%; height: 14px; }
+  .grade-track::before {
+    content: ''; position: absolute; left: 2px; right: 18px; bottom: 6px; border-top: 2px solid rgba(255,255,255,0.82); transform: skewX(34deg); transform-origin: left bottom;
   }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: inherit;
+  .grade-main { display: flex; align-items: flex-end; gap: 4px; }
+  .grade-value { font-family: 'Barlow Condensed', sans-serif; font-size: 38px; font-weight: 700; line-height: 0.84; }
+  .grade-unit { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; line-height: 1; padding-bottom: 4px; text-transform: uppercase; }
+  .ride-meta { display: grid; gap: 4px; width: 140px; }
+  .meta-chip { font-size: 8px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-soft); }
+  .meta-chip strong { color: var(--text-main); }
+  .leaflet-control-attribution, .leaflet-control-zoom { display: none; }
+  .rider-dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #f7fffd, #25d6c4 56%, #0b766d 100%);
+    border: 2px solid rgba(255,255,255,0.92);
   }
-
-  .power .metric-value,
-  .power .metric-sub { color: var(--power); }
-
-  .hr .metric-value,
-  .hr .metric-sub { color: var(--hr); }
-
-  .grade .metric-value { color: var(--climb); }
-
 </style>
 </head>
 <body>
   <div class="phone">
     <div class="screen">
-      <section class="overlay">
-        <div class="metrics-grid">
-          <article class="metric-card power">
-            <div class="metric-label">Power</div>
-            <div class="metric-main">
-              <div class="metric-value">247</div>
-              <div class="metric-unit">W</div>
+      <div class="hud">
+        <div class="hud-top">
+          <div class="map-panel">
+            <div class="map-shell">
+              <div class="map-gradient"></div>
+              <div id="map"></div>
             </div>
-            <div class="bar-track"><div class="bar-fill" style="width:85%; background: linear-gradient(90deg, #e8bb3d, #f7dc80);"></div></div>
-            <div class="metric-sub">Z4 Threshold</div>
-            <div class="metric-sub">Avg 218 W</div>
-          </article>
-
-          <article class="metric-card hr">
-            <div class="metric-label">Heart Rate</div>
-            <div class="metric-main">
-              <div class="metric-value">156</div>
-              <div class="metric-unit">bpm</div>
+          </div>
+          <div class="metrics-shell">
+            <div class="speed-shell">
+              <div class="metric-label">KM/H</div>
+              <div class="metric-value">68</div>
+              <div class="metric-sub">Avg 41.2 km/h</div>
             </div>
-            <div class="bar-track"><div class="bar-fill" style="width:60%; background: linear-gradient(90deg, #26c880, #78efbc);"></div></div>
-            <div class="metric-sub">Z3 Tempo</div>
-          </article>
-
-          <article class="metric-card speed">
-            <div class="metric-label">Speed</div>
-            <div class="metric-main">
-              <div class="metric-value">28.4</div>
-              <div class="metric-unit">km/h</div>
+            <div class="secondary-shell">
+              <div class="metric-block">
+                <div class="metric-label">Power</div>
+                <div class="metric-value compact" style="color: var(--power);">0</div>
+                <div class="zone-bar"><div class="zone-bar-fill" style="width:0%; background: linear-gradient(90deg, #eab308, rgba(255,255,255,0.95));"></div></div>
+                <div class="metric-sub" style="color: var(--power);">Coasting</div>
+                <div class="metric-sub">Avg 238 W</div>
+              </div>
+              <div class="metric-block">
+                <div class="metric-label">HR</div>
+                <div class="metric-value compact" style="color: var(--hr);">157</div>
+                <div class="zone-bar"><div class="zone-bar-fill" style="width:64%; background: linear-gradient(90deg, #22c55e, rgba(255,255,255,0.95));"></div></div>
+                <div class="metric-sub" style="color: var(--hr);">Z3 Tempo</div>
+              </div>
+              <div class="metric-block">
+                <div class="metric-label">Cadence</div>
+                <div class="metric-value compact">0</div>
+              </div>
             </div>
-            <div class="metric-sub">Avg 26.1 km/h</div>
-          </article>
-
-          <article class="metric-card distance">
-            <div class="metric-label">Distance</div>
-            <div class="metric-main">
-              <div class="metric-value">42.7</div>
-              <div class="metric-unit">km</div>
-            </div>
-            <div class="metric-sub"></div>
-          </article>
-
-          <article class="metric-card grade">
-            <div class="metric-label">Grade</div>
-            <div class="metric-main">
-              <div class="metric-value">+4.2</div>
-              <div class="metric-unit">%</div>
-            </div>
-            <div class="metric-sub">Elev Gain 812 m</div>
-          </article>
-
+          </div>
         </div>
-      </section>
+        <div class="terrain-panel">
+          <div class="grade-shell">
+            <div class="grade-track"></div>
+            <div class="grade-main">
+              <div class="grade-value">-8</div>
+              <div class="grade-unit">%</div>
+            </div>
+          </div>
+          <div class="ride-meta">
+            <div class="meta-chip"><strong>38.6</strong> km</div>
+            <div class="meta-chip">Avg 41.2 km/h</div>
+            <div class="meta-chip">Avg 238 W</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
+<script>
+  var map = L.map('map', { zoomControl: false, attributionControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false }).setView([46.497, 9.838], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  L.polyline([[46.4986, 9.8138],[46.4994, 9.8194],[46.4996, 9.8252],[46.4982, 9.8318],[46.497, 9.838]], { color: '#ffffff', weight: 4, opacity: 0.92 }).addTo(map);
+  var riderIcon = L.divIcon({ className: '', html: '<div class="rider-dot"></div>', iconSize: [14, 14], iconAnchor: [7, 7] });
+  L.marker([46.497, 9.838], { icon: riderIcon }).addTo(map);
+</script>
 </body>
 </html>

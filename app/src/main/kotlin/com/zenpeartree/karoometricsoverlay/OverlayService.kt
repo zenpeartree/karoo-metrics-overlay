@@ -111,12 +111,17 @@ class OverlayService : Service() {
                 MainActivity.KEY_SUBSCRIBE_HR,
                 MainActivity.DEFAULT_SUBSCRIBE_HR,
             )
+            val subscribeCadence = prefs.getBoolean(
+                MainActivity.KEY_SUBSCRIBE_CADENCE,
+                MainActivity.DEFAULT_SUBSCRIBE_CADENCE,
+            )
 
             val collector = MetricsCollector(
                 karooSystem = system,
                 shareLocation = shareLocation,
                 subscribePower = subscribePower,
                 subscribeHeartRate = subscribeHeartRate,
+                subscribeCadence = subscribeCadence,
                 onReconnectRequested = ::requestKarooReconnect,
             )
             metricsCollector = collector

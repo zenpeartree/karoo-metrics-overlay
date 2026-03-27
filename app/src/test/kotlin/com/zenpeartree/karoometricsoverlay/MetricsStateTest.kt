@@ -42,6 +42,12 @@ class MetricsStateTest {
     }
 
     @Test
+    fun `updateCadence updates cadence field`() {
+        MetricsState.updateCadence(91)
+        assertEquals(91, MetricsState.get().cadence)
+    }
+
+    @Test
     fun `updateDistance updates distance field`() {
         MetricsState.updateDistance(42.3)
         assertEquals(42.3, MetricsState.get().distance!!, 0.01)
@@ -79,6 +85,7 @@ class MetricsStateTest {
         MetricsState.updateAvgSpeed(28.0)
         MetricsState.updatePower(200)
         MetricsState.updateHeartRate(140)
+        MetricsState.updateCadence(88)
 
         MetricsState.updatePower(250)
 
@@ -87,6 +94,7 @@ class MetricsStateTest {
         assertEquals(28.0, snapshot.avgSpeed!!, 0.01)
         assertEquals(250, snapshot.power)
         assertEquals(140, snapshot.heartRate)
+        assertEquals(88, snapshot.cadence)
     }
 
     @Test
@@ -106,6 +114,7 @@ class MetricsStateTest {
         MetricsState.updateAvgSpeed(28.0)
         MetricsState.updatePower(200)
         MetricsState.updateHeartRate(150)
+        MetricsState.updateCadence(89)
         MetricsState.updateDistance(10.0)
         MetricsState.updateGrade(3.5)
         MetricsState.updateElevationGain(812.0)
@@ -116,6 +125,7 @@ class MetricsStateTest {
         assertNotNull(snapshot.avgSpeed)
         assertNotNull(snapshot.power)
         assertNotNull(snapshot.heartRate)
+        assertNotNull(snapshot.cadence)
         assertNotNull(snapshot.distance)
         assertNotNull(snapshot.grade)
         assertNotNull(snapshot.elevationGain)
@@ -127,6 +137,7 @@ class MetricsStateTest {
         MetricsState.updateSpeed(25.0)
         MetricsState.updatePower(180)
         MetricsState.updateAvgSpeed(24.0)
+        MetricsState.updateCadence(86)
         MetricsState.updateElevationGain(300.0)
         MetricsState.updateLocation(38.787, -9.39)
 
@@ -137,6 +148,7 @@ class MetricsStateTest {
         assertNull(snapshot.avgSpeed)
         assertNull(snapshot.power)
         assertNull(snapshot.heartRate)
+        assertNull(snapshot.cadence)
         assertNull(snapshot.distance)
         assertNull(snapshot.grade)
         assertNull(snapshot.elevationGain)
@@ -147,9 +159,9 @@ class MetricsStateTest {
 
     @Test
     fun `concurrent updates do not lose data`() {
-        val executor = Executors.newFixedThreadPool(8)
+        val executor = Executors.newFixedThreadPool(9)
         val iterations = 1000
-        val latch = CountDownLatch(8)
+        val latch = CountDownLatch(9)
 
         executor.submit {
             repeat(iterations) { MetricsState.updateSpeed(it.toDouble()) }
@@ -165,6 +177,10 @@ class MetricsStateTest {
         }
         executor.submit {
             repeat(iterations) { MetricsState.updateHeartRate(it) }
+            latch.countDown()
+        }
+        executor.submit {
+            repeat(iterations) { MetricsState.updateCadence(it) }
             latch.countDown()
         }
         executor.submit {
@@ -192,6 +208,7 @@ class MetricsStateTest {
         assertEquals(999.0, snapshot.avgSpeed!!, 0.01)
         assertEquals(999, snapshot.power)
         assertEquals(999, snapshot.heartRate)
+        assertEquals(999, snapshot.cadence)
         assertEquals(999.0, snapshot.distance!!, 0.01)
         assertEquals(999.0, snapshot.grade!!, 0.01)
         assertEquals(999.0, snapshot.elevationGain!!, 0.01)
@@ -203,12 +220,14 @@ class MetricsStateTest {
         MetricsState.updateSpeed(25.5)
         MetricsState.updateAvgSpeed(24.9)
         MetricsState.updatePower(180)
+        MetricsState.updateCadence(87)
         MetricsState.updateElevationGain(345.0)
         val json = MetricsState.get().toJson()
 
         assertTrue(json.contains("\"speed\":25.5"))
         assertTrue(json.contains("\"avgSpeed\":24.9"))
         assertTrue(json.contains("\"power\":180"))
+        assertTrue(json.contains("\"cadence\":87"))
         assertTrue(json.contains("\"elevGain\":345"))
     }
 }

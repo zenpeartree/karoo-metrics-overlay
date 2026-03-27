@@ -8,6 +8,7 @@ data class MetricsSnapshot(
     val avgSpeed: Double? = null,
     val power: Int? = null,
     val heartRate: Int? = null,
+    val cadence: Int? = null,
     val distance: Double? = null,
     val grade: Double? = null,
     val elevationGain: Double? = null,
@@ -21,13 +22,14 @@ data class MetricsSnapshot(
         val aspeed = avgSpeed?.let { String.format(Locale.US, "%.1f", it) } ?: "null"
         val p = power?.toString() ?: "null"
         val hr = heartRate?.toString() ?: "null"
+        val c = cadence?.toString() ?: "null"
         val d = distance?.let { String.format(Locale.US, "%.1f", it) } ?: "null"
         val g = grade?.let { String.format(Locale.US, "%.1f", it) } ?: "null"
         val eg = elevationGain?.let { String.format(Locale.US, "%.0f", it) } ?: "null"
         val ap = avgPower?.toString() ?: "null"
         val la = lat?.let { String.format(Locale.US, "%.6f", it) } ?: "null"
         val ln = lng?.let { String.format(Locale.US, "%.6f", it) } ?: "null"
-        return """{"speed":$s,"avgSpeed":$aspeed,"power":$p,"hr":$hr,"dist":$d,"grade":$g,"elevGain":$eg,"avgPower":$ap,"lat":$la,"lng":$ln,"ts":$timestamp}"""
+        return """{"speed":$s,"avgSpeed":$aspeed,"power":$p,"hr":$hr,"cadence":$c,"dist":$d,"grade":$g,"elevGain":$eg,"avgPower":$ap,"lat":$la,"lng":$ln,"ts":$timestamp}"""
     }
 }
 
@@ -54,6 +56,10 @@ object MetricsState {
 
     fun updateHeartRate(value: Int) {
         ref.updateAndGet { it.copy(heartRate = value, timestamp = System.currentTimeMillis()) }
+    }
+
+    fun updateCadence(value: Int) {
+        ref.updateAndGet { it.copy(cadence = value, timestamp = System.currentTimeMillis()) }
     }
 
     fun updateDistance(value: Double) {

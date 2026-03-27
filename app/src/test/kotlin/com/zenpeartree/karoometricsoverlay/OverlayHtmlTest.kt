@@ -24,15 +24,24 @@ class OverlayHtmlTest {
     }
 
     @Test
-    fun `overlay contains all metric elements`() {
-        val requiredIds = listOf("speed", "power", "hr", "dist", "grade", "avgSpeed", "elevGain", "power-avg")
+    fun `overlay contains all primary pov metric elements`() {
+        val requiredIds = listOf(
+            "speed",
+            "power",
+            "cadence",
+            "hr",
+            "dist",
+            "grade",
+            "avgSpeed",
+            "power-avg",
+        )
         for (id in requiredIds) {
             assertTrue("Missing element with id='$id'", html.contains("id=\"$id\""))
         }
     }
 
     @Test
-    fun `overlay contains zone bar elements`() {
+    fun `overlay retains zone elements for power and hr`() {
         assertTrue("Missing power zone bar", html.contains("id=\"power-bar\""))
         assertTrue("Missing power zone label", html.contains("id=\"power-zone\""))
         assertTrue("Missing HR zone bar", html.contains("id=\"hr-bar\""))
@@ -40,59 +49,30 @@ class OverlayHtmlTest {
     }
 
     @Test
-    fun `overlay contains WebSocket connection code`() {
-        assertTrue("Missing WebSocket constructor", html.contains("new WebSocket("))
+    fun `overlay polls metrics over http`() {
+        assertTrue("Missing fetch polling", html.contains("fetch('/metrics'"))
+        assertTrue("Missing polling interval", html.contains("setInterval(pollMetrics, 1000)"))
+        assertTrue("Missing no-store fetch option", html.contains("cache: 'no-store'"))
     }
 
     @Test
-    fun `overlay contains polling fallback`() {
-        assertTrue("Missing fetch fallback", html.contains("fetch('/metrics')"))
-    }
-
-    @Test
-    fun `overlay contains power zone definitions`() {
+    fun `overlay contains power and hr zone definitions`() {
         assertTrue("Missing FTP config", html.contains("var FTP = 250;"))
+        assertTrue("Missing MAX_HR config", html.contains("var MAX_HR = 187;"))
         assertTrue("Missing power zones", html.contains("powerZones"))
+        assertTrue("Missing HR zones", html.contains("hrZones"))
         assertTrue("Missing Z1", html.contains("Z1"))
         assertTrue("Missing Z7", html.contains("Z7"))
     }
 
     @Test
-    fun `overlay contains HR zone definitions`() {
-        assertTrue("Missing MAX_HR config", html.contains("var MAX_HR = 187;"))
-        assertTrue("Missing HR zones", html.contains("hrZones"))
-    }
-
-    @Test
-    fun `overlay FTP and MAX_HR use replaceable default format`() {
-        // These exact strings are what OverlayServer.loadOverlayHtml() replaces
+    fun `overlay FTP and feature flags use replaceable default format`() {
         assertTrue("FTP default must be in replaceable format", html.contains("var FTP = 250;"))
         assertTrue("MAX_HR default must be in replaceable format", html.contains("var MAX_HR = 187;"))
         assertTrue("SHOW_MAP default must be in replaceable format", html.contains("var SHOW_MAP = false;"))
         assertTrue("SHOW_POWER default must be in replaceable format", html.contains("var SHOW_POWER = true;"))
         assertTrue("SHOW_HR default must be in replaceable format", html.contains("var SHOW_HR = true;"))
-    }
-
-    @Test
-    fun `overlay contains grade color classes`() {
-        assertTrue("Missing grade-positive class", html.contains("grade-positive"))
-        assertTrue("Missing grade-negative class", html.contains("grade-negative"))
-        assertTrue("Missing grade-flat class", html.contains("grade-flat"))
-    }
-
-    @Test
-    fun `overlay contains reconnection logic`() {
-        assertTrue("Missing reconnect logic", html.contains("reconnectDelay"))
-        assertTrue("Missing fail count tracking", html.contains("wsFailCount"))
-    }
-
-    @Test
-    fun `overlay has correct metric units`() {
-        assertTrue("Missing km/h unit", html.contains("km/h"))
-        assertTrue("Missing W unit for power", html.contains(">W<"))
-        assertTrue("Missing bpm unit", html.contains("bpm"))
-        assertTrue("Missing km unit for distance", html.contains(">km<"))
-        assertTrue("Missing % unit for grade", html.contains(">%<"))
+        assertTrue("SHOW_CADENCE default must be in replaceable format", html.contains("var SHOW_CADENCE = true;"))
     }
 
     @Test
@@ -134,37 +114,29 @@ class OverlayHtmlTest {
     }
 
     @Test
-    fun `overlay includes production card layout and secondary ride stats`() {
-        assertTrue("Should include metrics shell", html.contains("metrics-shell"))
-        assertTrue("Should include metrics grid", html.contains("metrics-grid"))
-        assertTrue("Should show avg speed subline", html.contains("Avg -- km/h"))
-        assertTrue("Should show elevation gain subline", html.contains("Elev Gain -- m"))
-        assertTrue("Should show avg power in the power tile", html.contains("Avg -- W"))
+    fun `overlay includes pov layout scaffolding without imperial elevation callout`() {
+        assertTrue("Should include hud wrapper", html.contains("class=\"hud\""))
+        assertTrue("Should include terrain panel", html.contains("class=\"terrain-panel\""))
+        assertTrue("Should include speed shell", html.contains("class=\"speed-shell\""))
+        assertTrue("Should include secondary shell", html.contains("class=\"secondary-shell\""))
+        assertTrue("Should label cadence", html.contains(">Cadence<"))
+        assertTrue("Should not render mph label", !html.contains(">MPH<"))
+        assertTrue("Should not include elevation gain feet id", !html.contains("elevGain-ft"))
     }
 
     @Test
-    fun `overlay keeps desktop layout only`() {
-        assertTrue("Should keep the desktop metrics shell", html.contains(".metrics-shell"))
-        assertTrue("Should use a six-column grid to support 2-over-3 layout", html.contains("grid-template-columns: repeat(6, 1fr);"))
-        assertTrue("Should make top row tiles wider", html.contains(".metrics-grid > .metric-card:nth-child(-n+2)"))
-        assertTrue("Should always render distance card", html.contains("<div class=\"metric-card distance\">"))
-        assertTrue("Should shrink the metric shell width", html.contains("width: clamp(240px, 36vw, 351px);"))
-        assertTrue("Should shrink the map width", html.contains("width: clamp(110px, 14vw, 160px);"))
+    fun `overlay can remove optional power cadence and hr sections`() {
+        assertTrue("Should include power block id", html.contains("id=\"power-card\""))
+        assertTrue("Should include cadence block id", html.contains("id=\"cadence-card\""))
+        assertTrue("Should include hr block id", html.contains("id=\"hr-card\""))
+        assertTrue("Should remove power block when disabled", html.contains("if (!SHOW_POWER && els.powerCard && els.powerCard.parentNode)"))
+        assertTrue("Should remove cadence block when disabled", html.contains("if (!SHOW_CADENCE && els.cadenceCard && els.cadenceCard.parentNode)"))
+        assertTrue("Should remove hr block when disabled", html.contains("if (!SHOW_HR && els.hrCard && els.hrCard.parentNode)"))
     }
 
     @Test
-    fun `overlay can remove optional power and hr cards`() {
-        assertTrue("Should include power card id", html.contains("<div class=\"metric-card power\" id=\"power-card\">"))
-        assertTrue("Should include hr card id", html.contains("<div class=\"metric-card hr\" id=\"hr-card\">"))
-        assertTrue("Should remove power card when disabled", html.contains("if (!SHOW_POWER)"))
-        assertTrue("Should remove hr card when disabled", html.contains("if (!SHOW_HR && els.hrCard && els.hrCard.parentNode)"))
-    }
-
-    @Test
-    fun `overlay no longer includes mobile viewer overrides`() {
-        assertTrue("Should not contain compact mode CSS", !html.contains("compact-mode"))
-        assertTrue("Should not contain narrow mode CSS", !html.contains("narrow-mode"))
-        assertTrue("Should not parse viewer query parameters", !html.contains("params.get('viewer')"))
-        assertTrue("Should not define a mobile viewer mode", !html.contains("VIEWER_MODE_MOBILE"))
+    fun `overlay exposes polling status logic`() {
+        assertTrue("Missing poll failure counter", html.contains("pollFailures"))
+        assertTrue("Missing polling status text", html.contains("els.status.textContent = 'polling'"))
     }
 }

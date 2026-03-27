@@ -13,6 +13,7 @@ class MetricsCollector(
     private val shareLocation: Boolean,
     private val subscribePower: Boolean,
     private val subscribeHeartRate: Boolean,
+    private val subscribeCadence: Boolean,
     private val onReconnectRequested: (String) -> Unit = {},
 ) {
 
@@ -158,6 +159,26 @@ class MetricsCollector(
         DiagnosticEvents.record(TAG, "Subscribed to HR")
     }
 
+    private fun subscribeCadence() {
+        val id = karooSystem.addConsumer(
+            OnStreamState.StartStreaming(DataType.Type.CADENCE),
+            onError = { handleStreamError("Cadence", it) },
+        ) { event: OnStreamState ->
+            when (val state = event.state) {
+                is StreamState.Streaming -> {
+                    val value = state.dataPoint.values[DataType.Field.CADENCE]
+                    if (value != null) {
+                        markMetricDataReceived()
+                        MetricsState.updateCadence(value.toInt())
+                    }
+                }
+                else -> logStreamState("Cadence", state)
+            }
+        }
+        consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Cadence")
+    }
+
     private fun subscribeDistance() {
         val id = karooSystem.addConsumer(
             OnStreamState.StartStreaming(DataType.Type.DISTANCE),
@@ -269,6 +290,9 @@ class MetricsCollector(
         }
         if (subscribeHeartRate) {
             subscribeHeartRate()
+        }
+        if (subscribeCadence) {
+            subscribeCadence()
         }
         subscribeDistance()
         subscribeGrade()

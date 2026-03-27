@@ -11,17 +11,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --shell-bg: rgba(8, 12, 16, 0.56);
-    --shell-border: rgba(255, 255, 255, 0.08);
-    --shell-shadow: rgba(0, 0, 0, 0.22);
-    --text-main: #f5f8fa;
-    --text-soft: rgba(245, 248, 250, 0.76);
-    --text-dim: rgba(245, 248, 250, 0.42);
-    --power: #f2c44d;
-    --hr: #37d48a;
-    --climb: #ff6a56;
-    --descent: #58c3dd;
-    --neutral: rgba(245, 248, 250, 0.92);
+    --text-main: rgba(255, 255, 255, 0.96);
+    --text-soft: rgba(255, 255, 255, 0.84);
+    --text-dim: rgba(255, 255, 255, 0.62);
+    --panel-shadow: rgba(0, 0, 0, 0.18);
+    --power: #f6ca52;
+    --hr: #58dfa2;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -41,141 +36,33 @@
   .overlay {
     position: fixed;
     inset: 0;
-    padding: 15px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 10px;
     pointer-events: none;
   }
 
-  .metrics-shell {
-    width: clamp(240px, 36vw, 351px);
-    display: grid;
-    gap: 7px;
-  }
-
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 7px;
-  }
-
-  .metrics-grid > .metric-card {
-    grid-column: span 2;
-  }
-
-  .metrics-grid > .metric-card:nth-child(-n+2) {
-    grid-column: span 3;
-  }
-
-  .metric-card {
-    position: relative;
-    min-height: 89px;
-    padding: 11px 11px 9px;
-    border-radius: 14px;
-    background: var(--shell-bg);
-    border: 1px solid var(--shell-border);
-    backdrop-filter: blur(14px);
-    box-shadow:
-      0 16px 36px var(--shell-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    overflow: hidden;
-  }
-
-  .metric-card::before {
-    content: '';
+  .hud {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.3);
-  }
-
-  .metric-card.power::before { background: var(--power); }
-  .metric-card.hr::before { background: var(--hr); }
-  .metric-card.grade::before { background: var(--climb); }
-  .metric-card.speed::before { background: #6fb8ff; }
-  .metric-card.distance::before { background: #9e8bff; }
-  .metric-label {
-    margin-bottom: 6px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-  }
-
-  .metric-main {
+    left: 24px;
+    top: 24px;
+    bottom: 18px;
+    width: min(25vw, 296px);
     display: flex;
-    align-items: flex-end;
-    gap: 3px;
+    flex-direction: column;
+    justify-content: space-between;
   }
 
-  .metric-value {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 32px;
-    line-height: 0.88;
-    letter-spacing: 0.02em;
-    font-variant-numeric: tabular-nums;
-    transition: opacity 0.15s ease;
+  .hud-top {
+    display: grid;
+    gap: 18px;
   }
-
-  .metric-value.updated {
-    opacity: 0.72;
-  }
-
-  .metric-unit {
-    padding-bottom: 4px;
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--text-soft);
-  }
-
-  .metric-sub {
-    margin-top: 7px;
-    min-height: 14px;
-    font-size: 9px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--text-soft);
-  }
-
-  .bar-track {
-    margin-top: 7px;
-    height: 4px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    width: 0%;
-    border-radius: inherit;
-    transition: width 0.3s ease, background-color 0.3s ease;
-  }
-
-  .power .metric-value,
-  .power .metric-sub { color: var(--power); }
-
-  .hr .metric-value,
-  .hr .metric-sub { color: var(--hr); }
-
-  .grade .metric-value.grade-positive { color: var(--climb); }
-  .grade .metric-value.grade-negative { color: var(--descent); }
-  .grade .metric-value.grade-flat { color: var(--neutral); }
 
   .map-panel {
-    width: clamp(110px, 14vw, 160px);
-    padding: 6px;
-    border-radius: 16px;
-    background: rgba(8, 12, 16, 0.44);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(14px);
-    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+    width: clamp(116px, 10vw, 148px);
+    padding: 8px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 16px 32px var(--panel-shadow);
     display: none;
   }
 
@@ -186,11 +73,9 @@
   .map-shell {
     position: relative;
     width: 100%;
-    height: 109px;
-    border-radius: 12px;
+    aspect-ratio: 1 / 0.94;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+    background: rgba(20, 20, 20, 0.18);
   }
 
   .map-gradient {
@@ -199,14 +84,14 @@
     z-index: 450;
     pointer-events: none;
     background:
-      linear-gradient(180deg, rgba(4, 8, 12, 0.16), transparent 36%),
-      linear-gradient(0deg, rgba(4, 8, 12, 0.34), transparent 28%);
+      linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 34%),
+      linear-gradient(0deg, rgba(0, 0, 0, 0.18), transparent 28%);
   }
 
   #map {
     width: 100%;
     height: 100%;
-    filter: saturate(0.82) contrast(1.03) brightness(0.92);
+    filter: saturate(0.78) contrast(1.04) brightness(0.96);
   }
 
   .map-fallback {
@@ -215,20 +100,194 @@
     display: none;
     align-items: center;
     justify-content: center;
+    padding: 14px;
     text-align: center;
-    padding: 20px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: rgba(245, 248, 250, 0.76);
-    background: rgba(8, 12, 16, 0.72);
-    backdrop-filter: blur(8px);
+    color: var(--text-main);
+    background: rgba(10, 14, 18, 0.58);
     z-index: 500;
   }
 
   .map-panel.unavailable .map-fallback {
     display: flex;
+  }
+
+  .metrics-shell,
+  .speed-shell,
+  .secondary-shell,
+  .grade-shell {
+    display: grid;
+  }
+
+  .metrics-shell {
+    gap: 16px;
+  }
+
+  .speed-shell {
+    gap: 3px;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.32),
+      0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  .secondary-shell {
+    gap: 12px;
+    width: min(132px, 100%);
+  }
+
+  .metric-block {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.32),
+      0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  .metric-block.hidden {
+    display: none;
+  }
+
+  .metric-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 0.92;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-main);
+  }
+
+  .metric-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(44px, 4.4vw, 62px);
+    font-weight: 700;
+    line-height: 0.82;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+    transition: opacity 0.15s ease;
+  }
+
+  .metric-value.compact {
+    font-size: clamp(38px, 3.5vw, 46px);
+  }
+
+  .metric-value.updated {
+    opacity: 0.72;
+  }
+
+  .metric-sub {
+    min-height: 13px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .metric-sub.hidden {
+    display: none;
+  }
+
+  .zone-bar {
+    width: min(72px, 100%);
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    overflow: hidden;
+    margin-top: 1px;
+  }
+
+  .zone-bar.hidden {
+    display: none;
+  }
+
+  .zone-bar-fill {
+    width: 0%;
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.3s ease, background-color 0.3s ease;
+  }
+
+  .terrain-panel {
+    display: grid;
+    gap: 8px;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.32),
+      0 6px 20px rgba(0, 0, 0, 0.18);
+  }
+
+  .grade-shell {
+    gap: 4px;
+    width: min(172px, 100%);
+  }
+
+  .grade-track {
+    position: relative;
+    width: 100%;
+    height: 18px;
+  }
+
+  .grade-track::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    right: 22px;
+    bottom: 7px;
+    border-top: 2px solid rgba(255, 255, 255, 0.82);
+    transform: skewX(34deg);
+    transform-origin: left bottom;
+  }
+
+  .grade-main {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  .grade-value {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(40px, 4.2vw, 58px);
+    font-weight: 700;
+    line-height: 0.84;
+    letter-spacing: 0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .grade-unit {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    padding-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .ride-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px 12px;
+    width: min(250px, 100%);
+  }
+
+  .meta-chip {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  .meta-chip.hidden {
+    display: none;
+  }
+
+  .meta-chip strong {
+    font-weight: 600;
+    color: var(--text-main);
   }
 
   .status {
@@ -239,11 +298,11 @@
     font-weight: 500;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: rgba(245, 248, 250, 0.24);
+    color: rgba(255, 255, 255, 0.26);
   }
 
   .status.disconnected {
-    color: rgba(255, 112, 112, 0.46);
+    color: rgba(255, 148, 148, 0.62);
   }
 
   .leaflet-control-attribution,
@@ -255,75 +314,74 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #d4fff5, #17c6b5 60%, #0b766d 100%);
+    background: radial-gradient(circle at 35% 35%, #f7fffd, #25d6c4 56%, #0b766d 100%);
     border: 2px solid rgba(255, 255, 255, 0.92);
     box-shadow:
-      0 0 0 7px rgba(23, 198, 181, 0.1),
-      0 0 22px rgba(23, 198, 181, 0.28);
+      0 0 0 7px rgba(23, 198, 181, 0.12),
+      0 0 18px rgba(23, 198, 181, 0.24);
   }
-
 </style>
 </head>
 <body>
   <div class="overlay">
-    <div class="metrics-shell">
-      <div class="metrics-grid">
-        <div class="metric-card power" id="power-card">
-          <div class="metric-label">Power</div>
-          <div class="metric-main">
-            <div class="metric-value" id="power">--</div>
-            <div class="metric-unit">W</div>
+    <div class="hud">
+      <div class="hud-top">
+        <div class="map-panel" id="map-panel">
+          <div class="map-shell">
+            <div class="map-gradient"></div>
+            <div id="map"></div>
+            <div class="map-fallback" id="map-fallback">Map unavailable</div>
           </div>
-          <div class="bar-track"><div class="bar-fill" id="power-bar"></div></div>
-          <div class="metric-sub" id="power-zone"></div>
-          <div class="metric-sub" id="power-avg"></div>
         </div>
 
-        <div class="metric-card hr" id="hr-card">
-          <div class="metric-label">Heart Rate</div>
-          <div class="metric-main">
-            <div class="metric-value" id="hr">--</div>
-            <div class="metric-unit">bpm</div>
-          </div>
-          <div class="bar-track"><div class="bar-fill" id="hr-bar"></div></div>
-          <div class="metric-sub" id="hr-zone"></div>
-        </div>
-
-        <div class="metric-card speed">
-          <div class="metric-label">Speed</div>
-          <div class="metric-main">
+        <div class="metrics-shell">
+          <div class="speed-shell">
+            <div class="metric-label">KM/H</div>
             <div class="metric-value" id="speed">--</div>
-            <div class="metric-unit">km/h</div>
+            <div class="metric-sub" id="avgSpeed">Avg -- km/h</div>
           </div>
-          <div class="metric-sub" id="avgSpeed">Avg -- km/h</div>
-        </div>
 
-        <div class="metric-card distance">
-          <div class="metric-label">Distance</div>
-          <div class="metric-main">
-            <div class="metric-value" id="dist">--</div>
-            <div class="metric-unit">km</div>
+          <div class="secondary-shell" id="secondary-shell">
+            <div class="metric-block" id="power-card">
+              <div class="metric-label">Power</div>
+              <div class="metric-value compact" id="power">--</div>
+              <div class="zone-bar" id="power-bar-shell"><div class="zone-bar-fill" id="power-bar"></div></div>
+              <div class="metric-sub" id="power-zone"></div>
+              <div class="metric-sub" id="power-avg">Avg -- W</div>
+            </div>
+
+            <div class="metric-block" id="hr-card">
+              <div class="metric-label">HR</div>
+              <div class="metric-value compact" id="hr">--</div>
+              <div class="zone-bar" id="hr-bar-shell"><div class="zone-bar-fill" id="hr-bar"></div></div>
+              <div class="metric-sub" id="hr-zone"></div>
+              <div class="metric-sub hidden" id="hr-sub-2"></div>
+            </div>
+
+            <div class="metric-block" id="cadence-card">
+              <div class="metric-label">Cadence</div>
+              <div class="metric-value compact" id="cadence">--</div>
+              <div class="metric-sub hidden" id="cadence-sub"></div>
+              <div class="metric-sub hidden" id="cadence-sub-2"></div>
+            </div>
           </div>
-          <div class="metric-sub"></div>
         </div>
-
-        <div class="metric-card grade">
-          <div class="metric-label">Grade</div>
-          <div class="metric-main">
-            <div class="metric-value grade-flat" id="grade">--</div>
-            <div class="metric-unit">%</div>
-          </div>
-          <div class="metric-sub" id="elevGain">Elev Gain -- m</div>
-        </div>
-
       </div>
-    </div>
 
-    <div class="map-panel" id="map-panel">
-      <div class="map-shell">
-        <div class="map-gradient"></div>
-        <div id="map"></div>
-        <div class="map-fallback" id="map-fallback">Map unavailable</div>
+      <div class="terrain-panel">
+        <div class="grade-shell">
+          <div class="grade-track"></div>
+          <div class="grade-main">
+            <div class="grade-value" id="grade">--</div>
+            <div class="grade-unit">%</div>
+          </div>
+        </div>
+
+        <div class="ride-meta">
+          <div class="meta-chip" id="dist-chip"><strong id="dist">--</strong> km</div>
+          <div class="meta-chip" id="avg-speed-chip"><span id="avgSpeedMeta">Avg -- km/h</span></div>
+          <div class="meta-chip" id="power-avg-chip"><span id="powerAvgMeta">Avg -- W</span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -336,6 +394,7 @@
   var SHOW_MAP = false;
   var SHOW_POWER = true;
   var SHOW_HR = true;
+  var SHOW_CADENCE = true;
   var MAX_TRAIL_POINTS = 250;
   var MAP_EDGE_PADDING = -0.35;
 
@@ -376,21 +435,28 @@
   var els = {
     speed: document.getElementById('speed'),
     avgSpeed: document.getElementById('avgSpeed'),
+    avgSpeedMeta: document.getElementById('avgSpeedMeta'),
     power: document.getElementById('power'),
-    hr: document.getElementById('hr'),
-    dist: document.getElementById('dist'),
-    grade: document.getElementById('grade'),
-    elevGain: document.getElementById('elevGain'),
     powerCard: document.getElementById('power-card'),
-    hrCard: document.getElementById('hr-card'),
     powerBar: document.getElementById('power-bar'),
+    powerBarShell: document.getElementById('power-bar-shell'),
     powerZone: document.getElementById('power-zone'),
     powerAvg: document.getElementById('power-avg'),
+    powerAvgMeta: document.getElementById('powerAvgMeta'),
+    cadence: document.getElementById('cadence'),
+    cadenceCard: document.getElementById('cadence-card'),
+    hr: document.getElementById('hr'),
+    hrCard: document.getElementById('hr-card'),
     hrBar: document.getElementById('hr-bar'),
+    hrBarShell: document.getElementById('hr-bar-shell'),
     hrZone: document.getElementById('hr-zone'),
+    dist: document.getElementById('dist'),
+    grade: document.getElementById('grade'),
     status: document.getElementById('status'),
     mapPanel: document.getElementById('map-panel'),
-    mapFallback: document.getElementById('map-fallback')
+    mapFallback: document.getElementById('map-fallback'),
+    secondaryShell: document.getElementById('secondary-shell'),
+    powerAvgChip: document.getElementById('power-avg-chip')
   };
 
   var map = null;
@@ -400,17 +466,18 @@
   var mapReady = false;
   var mapUnavailable = false;
   var updateTimers = {};
-  var lastSnapshot = null;
 
   if (!SHOW_MAP && els.mapPanel && els.mapPanel.parentNode) {
     els.mapPanel.parentNode.removeChild(els.mapPanel);
     els.mapPanel = null;
   }
 
-  if (!SHOW_POWER) {
-    if (els.powerCard && els.powerCard.parentNode) {
-      els.powerCard.parentNode.removeChild(els.powerCard);
-    }
+  if (!SHOW_POWER && els.powerCard && els.powerCard.parentNode) {
+    els.powerCard.parentNode.removeChild(els.powerCard);
+  }
+
+  if (!SHOW_CADENCE && els.cadenceCard && els.cadenceCard.parentNode) {
+    els.cadenceCard.parentNode.removeChild(els.cadenceCard);
   }
 
   if (!SHOW_HR && els.hrCard && els.hrCard.parentNode) {
@@ -428,8 +495,8 @@
     }, 150);
   }
 
-  function setMetricValue(el, value, decimals) {
-    var display = value != null ? (decimals > 0 ? value.toFixed(decimals) : Math.round(value)) : '--';
+  function setMetricValue(el, value, formatFn) {
+    var display = value != null ? formatFn(value) : '--';
     if (el.textContent !== display) {
       el.textContent = display;
       pulse(el);
@@ -437,9 +504,23 @@
   }
 
   function setMetricSub(el, text) {
+    if (!el) return;
     if (el.textContent !== text) {
       el.textContent = text;
     }
+  }
+
+  function formatInteger(value) {
+    return String(Math.round(value));
+  }
+
+  function formatOneDecimal(value) {
+    return value.toFixed(1);
+  }
+
+  function formatSignedGrade(value) {
+    var rounded = Math.round(value);
+    return rounded > 0 ? '+' + rounded : String(rounded);
   }
 
   function showMapUnavailable(message) {
@@ -480,7 +561,7 @@
     tileLayer.addTo(map);
 
     routeTrail = L.polyline([], {
-      color: '#17c6b5',
+      color: '#ffffff',
       weight: 4,
       opacity: 0.92
     }).addTo(map);
@@ -493,6 +574,8 @@
     });
     riderMarker = L.marker([lat, lng], { icon: riderIcon }).addTo(map);
 
+    trailPoints = [[lat, lng]];
+    routeTrail.setLatLngs(trailPoints);
     mapReady = true;
   }
 
@@ -524,47 +607,47 @@
   }
 
   function updateMetrics(data) {
-    lastSnapshot = data;
-    setMetricValue(els.speed, data.speed, 1);
+    setMetricValue(els.speed, data.speed, formatInteger);
     if (SHOW_POWER) {
-      setMetricValue(els.power, data.power, 0);
+      setMetricValue(els.power, data.power, formatInteger);
+    }
+    if (SHOW_CADENCE) {
+      setMetricValue(els.cadence, data.cadence, formatInteger);
     }
     if (SHOW_HR) {
-      setMetricValue(els.hr, data.hr, 0);
+      setMetricValue(els.hr, data.hr, formatInteger);
     }
-    setMetricValue(els.dist, data.dist, 1);
-    if (SHOW_POWER) {
-      if (data.avgPower != null) {
-        setMetricSub(els.powerAvg, 'Avg ' + Math.round(data.avgPower) + ' W');
-      } else {
-        setMetricSub(els.powerAvg, 'Avg -- W');
-      }
-    }
+    setMetricValue(els.dist, data.dist, formatOneDecimal);
 
     if (data.avgSpeed != null) {
-      setMetricSub(els.avgSpeed, 'Avg ' + data.avgSpeed.toFixed(1) + ' km/h');
+      var avgSpeedText = 'Avg ' + data.avgSpeed.toFixed(1) + ' km/h';
+      setMetricSub(els.avgSpeed, avgSpeedText);
+      setMetricSub(els.avgSpeedMeta, avgSpeedText);
     } else {
       setMetricSub(els.avgSpeed, 'Avg -- km/h');
+      setMetricSub(els.avgSpeedMeta, 'Avg -- km/h');
     }
 
-    if (data.elevGain != null) {
-      setMetricSub(els.elevGain, 'Elev Gain ' + Math.round(data.elevGain) + ' m');
-    } else {
-      setMetricSub(els.elevGain, 'Elev Gain -- m');
+    if (SHOW_POWER) {
+      if (data.avgPower != null) {
+        var avgPowerText = 'Avg ' + Math.round(data.avgPower) + ' W';
+        setMetricSub(els.powerAvg, avgPowerText);
+        setMetricSub(els.powerAvgMeta, avgPowerText);
+      } else {
+        setMetricSub(els.powerAvg, 'Avg -- W');
+        setMetricSub(els.powerAvgMeta, 'Avg -- W');
+      }
+    } else if (els.powerAvgChip) {
+      els.powerAvgChip.classList.add('hidden');
     }
 
     if (data.grade != null) {
-      setMetricValue(els.grade, Math.abs(data.grade), 1);
-      var gradeClass = data.grade > 0.5 ? 'grade-positive' : (data.grade < -0.5 ? 'grade-negative' : 'grade-flat');
-      els.grade.className = 'metric-value ' + gradeClass;
-      if (data.grade >= 0) {
-        els.grade.textContent = '+' + data.grade.toFixed(1);
-      } else {
-        els.grade.textContent = data.grade.toFixed(1);
+      var gradeText = formatSignedGrade(data.grade);
+      if (els.grade.textContent !== gradeText) {
+        els.grade.textContent = gradeText;
+        pulse(els.grade);
       }
-      pulse(els.grade);
     } else {
-      els.grade.className = 'metric-value grade-flat';
       els.grade.textContent = '--';
     }
 
@@ -575,7 +658,7 @@
       els.power.style.color = pz.color;
       setMetricSub(els.powerZone, pz.name);
       els.powerZone.style.color = pz.color;
-    } else {
+    } else if (SHOW_POWER) {
       els.powerBar.style.width = '0%';
       els.powerBar.style.background = '';
       els.power.style.color = '';
@@ -590,7 +673,7 @@
       els.hr.style.color = hz.color;
       setMetricSub(els.hrZone, hz.name);
       els.hrZone.style.color = hz.color;
-    } else {
+    } else if (SHOW_HR) {
       els.hrBar.style.width = '0%';
       els.hrBar.style.background = '';
       els.hr.style.color = '';
@@ -603,68 +686,35 @@
     }
   }
 
-  var ws = null;
-  var reconnectDelay = 2000;
-  var wsFailCount = 0;
   var pollInterval = null;
+  var pollFailures = 0;
 
-  function connectWebSocket() {
-    var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    ws = new WebSocket(protocol + '//' + location.host);
-
-    ws.onopen = function() {
-      wsFailCount = 0;
-      reconnectDelay = 2000;
-      els.status.textContent = '';
-      els.status.className = 'status';
-      if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-      }
-    };
-
-    ws.onmessage = function(event) {
-      try {
-        updateMetrics(JSON.parse(event.data));
-      } catch (e) {}
-    };
-
-    ws.onclose = function() {
-      ws = null;
-      wsFailCount++;
-      els.status.textContent = 'reconnecting';
-      els.status.className = 'status disconnected';
-      if (wsFailCount >= 3) {
-        startPolling();
-      } else {
-        setTimeout(connectWebSocket, reconnectDelay);
-        reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
-      }
-    };
-
-    ws.onerror = function() {
-      if (ws) ws.close();
-    };
+  function pollMetrics() {
+    fetch('/metrics', { cache: 'no-store' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        pollFailures = 0;
+        els.status.textContent = '';
+        els.status.className = 'status';
+        updateMetrics(data);
+      })
+      .catch(function() {
+        pollFailures++;
+        els.status.textContent = 'polling';
+        els.status.className = 'status disconnected';
+      });
   }
 
   function startPolling() {
-    els.status.textContent = 'polling';
     if (pollInterval) return;
-    pollInterval = setInterval(function() {
-      fetch('/metrics')
-        .then(function(r) { return r.json(); })
-        .then(updateMetrics)
-        .catch(function() {});
-    }, 1000);
-    setTimeout(function() {
-      if (!ws) {
-        wsFailCount = 0;
-        connectWebSocket();
-      }
-    }, 15000);
+    pollMetrics();
+    pollInterval = setInterval(pollMetrics, 1000);
   }
 
-  connectWebSocket();
+  startPolling();
 })();
 </script>
 </body>

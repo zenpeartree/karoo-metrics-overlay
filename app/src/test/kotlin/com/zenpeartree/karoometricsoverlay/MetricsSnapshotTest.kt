@@ -17,6 +17,7 @@ class MetricsSnapshotTest {
         assertTrue(json.isNull("avgSpeed"))
         assertTrue(json.isNull("power"))
         assertTrue(json.isNull("hr"))
+        assertTrue(json.isNull("cadence"))
         assertTrue(json.isNull("dist"))
         assertTrue(json.isNull("grade"))
         assertTrue(json.isNull("elevGain"))
@@ -33,6 +34,7 @@ class MetricsSnapshotTest {
             avgSpeed = 30.1,
             power = 245,
             heartRate = 152,
+            cadence = 91,
             distance = 42.3,
             grade = 5.7,
             elevationGain = 812.0,
@@ -47,6 +49,7 @@ class MetricsSnapshotTest {
         assertEquals(30.1, json.getDouble("avgSpeed"), 0.1)
         assertEquals(245, json.getInt("power"))
         assertEquals(152, json.getInt("hr"))
+        assertEquals(91, json.getInt("cadence"))
         assertEquals(42.3, json.getDouble("dist"), 0.1)
         assertEquals(5.7, json.getDouble("grade"), 0.1)
         assertEquals(812.0, json.getDouble("elevGain"), 0.1)
@@ -84,6 +87,7 @@ class MetricsSnapshotTest {
             avgSpeed = 0.0,
             power = 0,
             heartRate = 0,
+            cadence = 0,
             distance = 0.0,
             grade = 0.0,
             elevationGain = 0.0,
@@ -96,6 +100,7 @@ class MetricsSnapshotTest {
         assertEquals(0.0, json.getDouble("avgSpeed"), 0.01)
         assertEquals(0, json.getInt("power"))
         assertEquals(0, json.getInt("hr"))
+        assertEquals(0, json.getInt("cadence"))
         assertEquals(0.0, json.getDouble("dist"), 0.01)
         assertEquals(0.0, json.getDouble("grade"), 0.01)
         assertEquals(0.0, json.getDouble("elevGain"), 0.01)
@@ -104,13 +109,14 @@ class MetricsSnapshotTest {
 
     @Test
     fun `toJson with partial values`() {
-        val snapshot = MetricsSnapshot(speed = 25.0, heartRate = 140, timestamp = 0L)
+        val snapshot = MetricsSnapshot(speed = 25.0, heartRate = 140, cadence = 88, timestamp = 0L)
         val json = JSONObject(snapshot.toJson())
 
         assertEquals(25.0, json.getDouble("speed"), 0.1)
         assertTrue(json.isNull("avgSpeed"))
         assertTrue(json.isNull("power"))
         assertEquals(140, json.getInt("hr"))
+        assertEquals(88, json.getInt("cadence"))
         assertTrue(json.isNull("dist"))
         assertTrue(json.isNull("grade"))
         assertTrue(json.isNull("elevGain"))
@@ -141,6 +147,7 @@ class MetricsSnapshotTest {
             avgSpeed = 37.4,
             power = 2000,
             heartRate = 220,
+            cadence = 150,
             distance = 999.9,
             grade = 25.0,
             elevationGain = 5432.0,
@@ -153,6 +160,7 @@ class MetricsSnapshotTest {
         assertEquals(37.4, json.getDouble("avgSpeed"), 0.1)
         assertEquals(2000, json.getInt("power"))
         assertEquals(220, json.getInt("hr"))
+        assertEquals(150, json.getInt("cadence"))
         assertEquals(999.9, json.getDouble("dist"), 0.1)
         assertEquals(25.0, json.getDouble("grade"), 0.1)
         assertEquals(5432.0, json.getDouble("elevGain"), 0.1)
@@ -166,6 +174,7 @@ class MetricsSnapshotTest {
         assertEquals(null, snapshot.avgSpeed)
         assertEquals(null, snapshot.power)
         assertEquals(null, snapshot.heartRate)
+        assertEquals(null, snapshot.cadence)
         assertEquals(null, snapshot.distance)
         assertEquals(null, snapshot.grade)
         assertEquals(null, snapshot.elevationGain)
@@ -176,13 +185,14 @@ class MetricsSnapshotTest {
 
     @Test
     fun `copy preserves unchanged fields`() {
-        val original = MetricsSnapshot(speed = 30.0, avgSpeed = 28.0, power = 200, heartRate = 150, elevationGain = 200.0, timestamp = 100L)
+        val original = MetricsSnapshot(speed = 30.0, avgSpeed = 28.0, power = 200, heartRate = 150, cadence = 92, elevationGain = 200.0, timestamp = 100L)
         val updated = original.copy(power = 250, timestamp = 200L)
 
         assertEquals(30.0, updated.speed!!, 0.01)
         assertEquals(28.0, updated.avgSpeed!!, 0.01)
         assertEquals(250, updated.power)
         assertEquals(150, updated.heartRate)
+        assertEquals(92, updated.cadence)
         assertEquals(200.0, updated.elevationGain!!, 0.01)
         assertEquals(200L, updated.timestamp)
     }

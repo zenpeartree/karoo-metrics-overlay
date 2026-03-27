@@ -17,8 +17,8 @@ android {
         applicationId = "com.zenpeartree.karoometricsoverlay"
         minSdk = 23
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.1.9"
+        versionCode = 14
+        versionName = "1.1.12"
     }
 
     signingConfigs {
