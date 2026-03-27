@@ -25,9 +25,13 @@ class MainActivity : Activity() {
         const val KEY_FTP = "ftp"
         const val KEY_MAX_HR = "max_hr"
         const val KEY_SHARE_LOCATION = "share_location"
+        const val KEY_SUBSCRIBE_POWER = "subscribe_power"
+        const val KEY_SUBSCRIBE_HR = "subscribe_hr"
         const val DEFAULT_FTP = 200
         const val DEFAULT_MAX_HR = 190
         const val DEFAULT_SHARE_LOCATION = false
+        const val DEFAULT_SUBSCRIBE_POWER = true
+        const val DEFAULT_SUBSCRIBE_HR = true
     }
 
     private lateinit var prefs: SharedPreferences
@@ -39,6 +43,8 @@ class MainActivity : Activity() {
     private lateinit var ftpInput: EditText
     private lateinit var maxHrInput: EditText
     private lateinit var shareLocationInput: CheckBox
+    private lateinit var subscribePowerInput: CheckBox
+    private lateinit var subscribeHeartRateInput: CheckBox
     private val handler = Handler(Looper.getMainLooper())
 
     private val uiUpdater = object : Runnable {
@@ -126,6 +132,20 @@ class MainActivity : Activity() {
         }
         layout.addView(shareLocationInput)
 
+        subscribePowerInput = CheckBox(this).apply {
+            text = "Subscribe to power fields (includes avg power)"
+            isChecked = prefs.getBoolean(KEY_SUBSCRIBE_POWER, DEFAULT_SUBSCRIBE_POWER)
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(subscribePowerInput)
+
+        subscribeHeartRateInput = CheckBox(this).apply {
+            text = "Subscribe to heart rate field"
+            isChecked = prefs.getBoolean(KEY_SUBSCRIBE_HR, DEFAULT_SUBSCRIBE_HR)
+            setPadding(0, 8, 0, 0)
+        }
+        layout.addView(subscribeHeartRateInput)
+
         // --- Status ---
         statusText = TextView(this).apply {
             text = "Stopped"
@@ -159,7 +179,7 @@ class MainActivity : Activity() {
         layout.addView(toggleButton)
 
         infoText = TextView(this).apply {
-            text = "\nAdd the URL above as a Browser Source in OBS.\nUse ?viewer=desktop for desktop viewers or ?viewer=mobile for mobile viewers."
+            text = "\nAdd the URL above as a Browser Source in OBS.\nDiagnostics are available at /debug/events on the same address."
             textSize = 12f
             gravity = Gravity.CENTER
             setPadding(0, 16, 0, 0)
@@ -188,6 +208,8 @@ class MainActivity : Activity() {
             .putInt(KEY_FTP, ftp)
             .putInt(KEY_MAX_HR, maxHr)
             .putBoolean(KEY_SHARE_LOCATION, shareLocationInput.isChecked)
+            .putBoolean(KEY_SUBSCRIBE_POWER, subscribePowerInput.isChecked)
+            .putBoolean(KEY_SUBSCRIBE_HR, subscribeHeartRateInput.isChecked)
             .apply()
     }
 
@@ -214,33 +236,29 @@ class MainActivity : Activity() {
             statusText.text = "Running"
             val baseAddress = OverlayService.serverAddress
             addressText.text = if (baseAddress != null) {
-                buildString {
-                    append(baseAddress)
-                    append("\nDesktop viewers: ")
-                    append(baseAddress)
-                    append("?viewer=desktop")
-                    append("\nMobile viewers: ")
-                    append(baseAddress)
-                    append("?viewer=mobile")
-                }
+                baseAddress
             } else {
                 "Getting address..."
             }
             toggleButton.text = "Stop Server"
             errorText.text = ""
-            infoText.text = "\nUse the desktop or mobile viewer URL depending on who the stream is optimized for."
+            infoText.text = "\nUse the URL above as a Browser Source in OBS.\nDiagnostics are available at /debug/events on the same address."
             ftpInput.isEnabled = false
             maxHrInput.isEnabled = false
             shareLocationInput.isEnabled = false
+            subscribePowerInput.isEnabled = false
+            subscribeHeartRateInput.isEnabled = false
         } else {
             statusText.text = "Stopped"
             addressText.text = ""
             toggleButton.text = "Start Server"
             errorText.text = OverlayService.lastError ?: ""
-            infoText.text = "\nAdd the URL above as a Browser Source in OBS.\nUse ?viewer=desktop for desktop viewers or ?viewer=mobile for mobile viewers."
+            infoText.text = "\nAdd the URL above as a Browser Source in OBS.\nDiagnostics are available at /debug/events on the same address."
             ftpInput.isEnabled = true
             maxHrInput.isEnabled = true
             shareLocationInput.isEnabled = true
+            subscribePowerInput.isEnabled = true
+            subscribeHeartRateInput.isEnabled = true
         }
     }
 }

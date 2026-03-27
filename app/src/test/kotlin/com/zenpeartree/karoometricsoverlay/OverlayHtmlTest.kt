@@ -25,7 +25,7 @@ class OverlayHtmlTest {
 
     @Test
     fun `overlay contains all metric elements`() {
-        val requiredIds = listOf("speed", "power", "hr", "dist", "grade", "avgPower", "avgSpeed", "elevGain")
+        val requiredIds = listOf("speed", "power", "hr", "dist", "grade", "avgSpeed", "elevGain", "power-avg")
         for (id in requiredIds) {
             assertTrue("Missing element with id='$id'", html.contains("id=\"$id\""))
         }
@@ -69,6 +69,8 @@ class OverlayHtmlTest {
         assertTrue("FTP default must be in replaceable format", html.contains("var FTP = 250;"))
         assertTrue("MAX_HR default must be in replaceable format", html.contains("var MAX_HR = 187;"))
         assertTrue("SHOW_MAP default must be in replaceable format", html.contains("var SHOW_MAP = false;"))
+        assertTrue("SHOW_POWER default must be in replaceable format", html.contains("var SHOW_POWER = true;"))
+        assertTrue("SHOW_HR default must be in replaceable format", html.contains("var SHOW_HR = true;"))
     }
 
     @Test
@@ -137,14 +139,25 @@ class OverlayHtmlTest {
         assertTrue("Should include metrics grid", html.contains("metrics-grid"))
         assertTrue("Should show avg speed subline", html.contains("Avg -- km/h"))
         assertTrue("Should show elevation gain subline", html.contains("Elev Gain -- m"))
+        assertTrue("Should show avg power in the power tile", html.contains("Avg -- W"))
     }
 
     @Test
     fun `overlay keeps desktop layout only`() {
         assertTrue("Should keep the desktop metrics shell", html.contains(".metrics-shell"))
-        assertTrue("Should keep the desktop three-column grid", html.contains("grid-template-columns: repeat(3, 1fr);"))
+        assertTrue("Should use a six-column grid to support 2-over-3 layout", html.contains("grid-template-columns: repeat(6, 1fr);"))
+        assertTrue("Should make top row tiles wider", html.contains(".metrics-grid > .metric-card:nth-child(-n+2)"))
         assertTrue("Should always render distance card", html.contains("<div class=\"metric-card distance\">"))
-        assertTrue("Should always render avg power card", html.contains("<div class=\"metric-card avg-power\">"))
+        assertTrue("Should shrink the metric shell width", html.contains("width: clamp(240px, 36vw, 351px);"))
+        assertTrue("Should shrink the map width", html.contains("width: clamp(110px, 14vw, 160px);"))
+    }
+
+    @Test
+    fun `overlay can remove optional power and hr cards`() {
+        assertTrue("Should include power card id", html.contains("<div class=\"metric-card power\" id=\"power-card\">"))
+        assertTrue("Should include hr card id", html.contains("<div class=\"metric-card hr\" id=\"hr-card\">"))
+        assertTrue("Should remove power card when disabled", html.contains("if (!SHOW_POWER)"))
+        assertTrue("Should remove hr card when disabled", html.contains("if (!SHOW_HR && els.hrCard && els.hrCard.parentNode)"))
     }
 
     @Test

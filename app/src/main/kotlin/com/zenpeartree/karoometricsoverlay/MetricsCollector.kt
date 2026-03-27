@@ -11,6 +11,8 @@ import io.hammerhead.karooext.models.StreamState
 class MetricsCollector(
     private val karooSystem: KarooSystemService,
     private val shareLocation: Boolean,
+    private val subscribePower: Boolean,
+    private val subscribeHeartRate: Boolean,
     private val onReconnectRequested: (String) -> Unit = {},
 ) {
 
@@ -31,6 +33,7 @@ class MetricsCollector(
     private var started = false
     private var refreshPending = false
     private var refreshAttempts = 0
+    private val lastStreamStates = mutableMapOf<String, String>()
 
     @Volatile
     private var lastMetricDataAt = 0L
@@ -54,6 +57,7 @@ class MetricsCollector(
             started = true
             lastMetricDataAt = 0L
             refreshAttempts = 0
+            lastStreamStates.clear()
             startWatchdogLocked()
             subscribeAllLocked()
         }
@@ -69,7 +73,8 @@ class MetricsCollector(
             lastMetricDataAt = 0L
             lastSubscriptionAt = 0L
             refreshAttempts = 0
-            Log.i(TAG, "Stopped collecting metrics")
+            lastStreamStates.clear()
+            DiagnosticEvents.record(TAG, "Stopped collecting metrics")
         }
     }
 
@@ -86,10 +91,11 @@ class MetricsCollector(
                         MetricsState.updateSpeed(value * MS_TO_KMH)
                     }
                 }
-                else -> Log.d(TAG, "Speed stream state: $state")
+                else -> logStreamState("Speed", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Speed")
     }
 
     private fun subscribePower() {
@@ -105,10 +111,11 @@ class MetricsCollector(
                         MetricsState.updatePower(value.toInt())
                     }
                 }
-                else -> Log.d(TAG, "Power stream state: $state")
+                else -> logStreamState("Power", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Power")
     }
 
     private fun subscribeAvgSpeed() {
@@ -124,10 +131,11 @@ class MetricsCollector(
                         MetricsState.updateAvgSpeed(value * MS_TO_KMH)
                     }
                 }
-                else -> Log.d(TAG, "Avg speed stream state: $state")
+                else -> logStreamState("Avg speed", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Avg speed")
     }
 
     private fun subscribeHeartRate() {
@@ -143,10 +151,11 @@ class MetricsCollector(
                         MetricsState.updateHeartRate(value.toInt())
                     }
                 }
-                else -> Log.d(TAG, "HR stream state: $state")
+                else -> logStreamState("HR", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to HR")
     }
 
     private fun subscribeDistance() {
@@ -162,10 +171,11 @@ class MetricsCollector(
                         MetricsState.updateDistance(value * M_TO_KM)
                     }
                 }
-                else -> Log.d(TAG, "Distance stream state: $state")
+                else -> logStreamState("Distance", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Distance")
     }
 
     private fun subscribeGrade() {
@@ -181,10 +191,11 @@ class MetricsCollector(
                         MetricsState.updateGrade(value)
                     }
                 }
-                else -> Log.d(TAG, "Grade stream state: $state")
+                else -> logStreamState("Grade", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Grade")
     }
 
     private fun subscribeAvgPower() {
@@ -200,10 +211,11 @@ class MetricsCollector(
                         MetricsState.updateAvgPower(value.toInt())
                     }
                 }
-                else -> Log.d(TAG, "Avg power stream state: $state")
+                else -> logStreamState("Avg power", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Avg power")
     }
 
     private fun subscribeElevationGain() {
@@ -219,10 +231,11 @@ class MetricsCollector(
                         MetricsState.updateElevationGain(value)
                     }
                 }
-                else -> Log.d(TAG, "Elevation gain stream state: $state")
+                else -> logStreamState("Elevation gain", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Elevation gain")
     }
 
     private fun subscribeLocation() {
@@ -238,10 +251,11 @@ class MetricsCollector(
                         MetricsState.updateLocation(lat, lng)
                     }
                 }
-                else -> Log.d(TAG, "Location stream state: $state")
+                else -> logStreamState("Location", state)
             }
         }
         consumerIds.add(id)
+        DiagnosticEvents.record(TAG, "Subscribed to Location")
     }
 
     private fun subscribeAllLocked() {
@@ -249,16 +263,20 @@ class MetricsCollector(
         lastSubscriptionAt = System.currentTimeMillis()
         subscribeSpeed()
         subscribeAvgSpeed()
-        subscribePower()
-        subscribeHeartRate()
+        if (subscribePower) {
+            subscribePower()
+            subscribeAvgPower()
+        }
+        if (subscribeHeartRate) {
+            subscribeHeartRate()
+        }
         subscribeDistance()
         subscribeGrade()
         subscribeElevationGain()
-        subscribeAvgPower()
         if (shareLocation) {
             subscribeLocation()
         }
-        Log.i(TAG, "Started collecting metrics (${consumerIds.size} consumers)")
+        DiagnosticEvents.record(TAG, "Started collecting metrics (${consumerIds.size} consumers)")
     }
 
     private fun unsubscribeAllLocked() {
@@ -297,19 +315,26 @@ class MetricsCollector(
             }
         }
         if (shouldRefresh) {
+            DiagnosticEvents.recordWarning(
+                TAG,
+                "Watchdog detected stale metrics: age=${now - lastMetricDataAt}ms subscriptionAge=${now - lastSubscriptionAt}ms",
+            )
             scheduleRefresh("No metric updates received recently")
         }
     }
 
     private fun markMetricDataReceived() {
         synchronized(lock) {
+            if (lastMetricDataAt == 0L) {
+                DiagnosticEvents.record(TAG, "Received first live metric datapoint")
+            }
             lastMetricDataAt = System.currentTimeMillis()
             refreshAttempts = 0
         }
     }
 
     private fun handleStreamError(streamName: String, error: Any?) {
-        Log.w(TAG, "$streamName stream error: $error")
+        DiagnosticEvents.recordWarning(TAG, "$streamName stream error: $error")
         scheduleRefresh("$streamName stream error")
     }
 
@@ -339,14 +364,23 @@ class MetricsCollector(
             refreshAttempts += 1
             shouldReconnect = refreshAttempts >= 2
             if (!shouldReconnect) {
-                Log.w(TAG, "Refreshing metric subscriptions: $reason")
+                DiagnosticEvents.recordWarning(TAG, "Refreshing metric subscriptions: $reason")
                 subscribeAllLocked()
             }
         }
         if (shouldReconnect) {
-            Log.w(TAG, "Escalating to Karoo reconnect after repeated refresh failures: $reason")
+            DiagnosticEvents.recordWarning(TAG, "Escalating to Karoo reconnect after repeated refresh failures: $reason")
             onReconnectRequested(reason)
         }
+    }
+
+    private fun logStreamState(streamName: String, state: StreamState) {
+        val description = state.javaClass.simpleName ?: state.toString()
+        synchronized(lock) {
+            if (lastStreamStates[streamName] == description) return
+            lastStreamStates[streamName] = description
+        }
+        DiagnosticEvents.record(TAG, "$streamName stream state: $description")
     }
 }
 

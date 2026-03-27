@@ -114,10 +114,10 @@ class OverlayServer private constructor(
             try {
                 super.start()
                 startBroadcastLoop()
-                Log.i(TAG, "Server started on port $listeningPort (attempt $attempt)")
+                DiagnosticEvents.record(TAG, "Server started on port $listeningPort (attempt $attempt)")
                 return
             } catch (e: IOException) {
-                Log.w(TAG, "Start attempt $attempt/5 failed: ${e.message}")
+                DiagnosticEvents.recordWarning(TAG, "Start attempt $attempt/5 failed: ${e.message}")
                 lastException = e
                 try { super.stop() } catch (_: Exception) {}
                 closeManagedChannel()
@@ -132,7 +132,7 @@ class OverlayServer private constructor(
         clients.clear()
         super.stop()
         closeManagedChannel()
-        Log.i(TAG, "Server stopped")
+        DiagnosticEvents.record(TAG, "Server stopped")
     }
 
     override fun openWebSocket(handshake: IHTTPSession): WebSocket {
@@ -155,6 +155,12 @@ class OverlayServer private constructor(
                     it.addHeader("Access-Control-Allow-Origin", "*")
                 }
             }
+            "/debug/events" -> {
+                val json = DiagnosticEvents.toJson()
+                newFixedLengthResponse(Response.Status.OK, "application/json", json).also {
+                    it.addHeader("Access-Control-Allow-Origin", "*")
+                }
+            }
             else -> {
                 newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not Found")
             }
@@ -173,16 +179,26 @@ class OverlayServer private constructor(
                 MainActivity.KEY_SHARE_LOCATION,
                 MainActivity.DEFAULT_SHARE_LOCATION,
             )
+            val subscribePower = prefs.getBoolean(
+                MainActivity.KEY_SUBSCRIBE_POWER,
+                MainActivity.DEFAULT_SUBSCRIBE_POWER,
+            )
+            val subscribeHeartRate = prefs.getBoolean(
+                MainActivity.KEY_SUBSCRIBE_HR,
+                MainActivity.DEFAULT_SUBSCRIBE_HR,
+            )
 
             val injected = template
                 .replace("var FTP = 250;", "var FTP = $ftp;")
                 .replace("var MAX_HR = 187;", "var MAX_HR = $maxHr;")
                 .replace("var SHOW_MAP = false;", "var SHOW_MAP = $shareLocation;")
+                .replace("var SHOW_POWER = true;", "var SHOW_POWER = $subscribePower;")
+                .replace("var SHOW_HR = true;", "var SHOW_HR = $subscribeHeartRate;")
 
             overlayHtml = injected.toByteArray(StandardCharsets.UTF_8)
-            Log.i(
+            DiagnosticEvents.record(
                 TAG,
-                "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr, SHOW_MAP=$shareLocation",
+                "Loaded overlay.html (${overlayHtml?.size} bytes) with FTP=$ftp, MAX_HR=$maxHr, SHOW_MAP=$shareLocation, SHOW_POWER=$subscribePower, SHOW_HR=$subscribeHeartRate",
             )
         } catch (e: IOException) {
             Log.e(TAG, "Failed to load overlay.html", e)
@@ -222,12 +238,12 @@ class OverlayServer private constructor(
 
         override fun onOpen() {
             clients.add(this)
-            Log.d(TAG, "WebSocket client connected (${clients.size} total)")
+            DiagnosticEvents.record(TAG, "WebSocket client connected (${clients.size} total)")
         }
 
         override fun onClose(code: NanoWSD.WebSocketFrame.CloseCode?, reason: String?, initiatedByRemote: Boolean) {
             clients.remove(this)
-            Log.d(TAG, "WebSocket client disconnected (${clients.size} total)")
+            DiagnosticEvents.record(TAG, "WebSocket client disconnected (${clients.size} total)")
         }
 
         override fun onMessage(message: NanoWSD.WebSocketFrame?) {
@@ -238,7 +254,7 @@ class OverlayServer private constructor(
 
         override fun onException(exception: IOException?) {
             clients.remove(this)
-            Log.w(TAG, "WebSocket error", exception)
+            DiagnosticEvents.recordWarning(TAG, "WebSocket error: ${exception?.message ?: "unknown"}")
         }
     }
 }

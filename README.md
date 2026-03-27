@@ -20,12 +20,11 @@ The app runs a lightweight server directly on the Karoo. Point any browser or st
 
 | Metric | Details |
 |--------|---------|
-| **Power** | Current watts with 7-zone color coding (based on your FTP) |
-| **Heart Rate** | Current BPM with 5-zone color coding (based on your max HR) |
+| **Power** | Current watts with 7-zone color coding plus avg power in the same tile (based on your FTP), optional in app settings |
+| **Heart Rate** | Current BPM with 5-zone color coding (based on your max HR), optional in app settings |
 | **Speed** | Current speed in km/h |
 | **Distance** | Ride distance in km |
 | **Grade** | Current gradient % (color-coded: red uphill, cyan downhill) |
-| **Avg Power** | Ride average power in watts |
 | **Optional Map** | Live location mini-map and route trace, only if location sharing is enabled in the app |
 
 ### Power Zones
@@ -83,8 +82,12 @@ The app runs a lightweight server directly on the Karoo. Point any browser or st
 1. On the Karoo, open **Karoo Metrics Overlay** from the app drawer
 2. Enter your **FTP** (watts) and **Max HR** (bpm) — these are used to calculate zones
 3. Choose whether to **share live location with the browser overlay**
-4. Tap **Start Server**
-5. The app displays the overlay URL (e.g., `http://192.168.1.42:9091/`)
+4. Choose whether to subscribe to **Power** and **Heart Rate** fields
+5. If Power is enabled, the overlay shows both current power and avg power in the same tile
+6. If Heart Rate is disabled, the HR tile is removed from the overlay
+7. If location sharing is disabled, the map is removed from the overlay
+8. Tap **Start Server**
+9. The app displays the overlay URL (e.g., `http://192.168.1.42:9091/`)
 
 ### Privacy / Location Sharing
 
@@ -96,16 +99,11 @@ The app runs a lightweight server directly on the Karoo. Point any browser or st
 
 1. In OBS: **Sources → Add → Browser**
 2. Set the URL to the address shown in the app
-3. Choose the viewer-targeted layout in the URL:
-   `?viewer=desktop` keeps the full desktop layout
-   `?viewer=mobile` forces the compact mobile layout
-4. Recommended size without map: **440 × 180**
-5. Recommended size with map enabled: **440 × 430**
-6. Position the overlay in your desired corner
-7. The background is transparent — the video feed shows through
-8. Start a ride on the Karoo — metrics update in real time
-
-The layout preset is now based on the audience you want to optimize for, not the streamer's local browser-source dimensions. If you skip the query parameter, the overlay defaults to the desktop viewer layout.
+3. Recommended size without map: **360 × 160**
+4. Recommended size with map enabled: **540 × 170**
+5. Position the overlay in your desired corner
+6. The background is transparent — the video feed shows through
+7. Start a ride on the Karoo — metrics update in real time
 
 ### Mobile Streaming Setup
 

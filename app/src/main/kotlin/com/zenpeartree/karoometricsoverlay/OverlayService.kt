@@ -20,6 +20,8 @@ class OverlayService : Service() {
         private const val TAG = "OverlayService"
         private const val CHANNEL_ID = "overlay_service"
         private const val NOTIFICATION_ID = 1
+        private const val CONNECT_RETRY_DELAY_MS = 3_000L
+        private const val MAX_CONNECT_RETRIES = 5
         const val ACTION_START = "com.zenpeartree.karoometricsoverlay.START"
         const val ACTION_STOP = "com.zenpeartree.karoometricsoverlay.STOP"
 
@@ -36,10 +38,13 @@ class OverlayService : Service() {
     private var overlayServer: OverlayServer? = null
     private val serviceHandler = Handler(Looper.getMainLooper())
     private var reconnectInProgress = false
+    private var connectRetryCount = 0
+    private var destroyed = false
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        destroyed = false
         when (intent?.action) {
             ACTION_STOP -> {
                 stopSelf()
@@ -54,25 +59,39 @@ class OverlayService : Service() {
 
         lastError = null
         serverAddress = null
+        connectRetryCount = 0
         MetricsState.reset()
+        DiagnosticEvents.clear()
+        DiagnosticEvents.record(TAG, "Overlay service start requested")
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, buildNotification("Starting..."))
 
-        val system = KarooSystemService(this)
-        karooSystem = system
-
-        connectToKarooSystem(system, startServer = true)
+        beginKarooConnection(startServer = true)
 
         return START_STICKY
     }
 
+    private fun beginKarooConnection(startServer: Boolean) {
+        if (destroyed) return
+        DiagnosticEvents.record(TAG, "Beginning Karoo connection (startServer=$startServer)")
+        val system = KarooSystemService(this)
+        karooSystem = system
+        connectToKarooSystem(system, startServer)
+    }
+
     private fun connectToKarooSystem(system: KarooSystemService, startServer: Boolean) {
         system.connect { connected ->
-            if (connected) {
-                Log.i(TAG, "Connected to Karoo System")
-                startOverlay(system, startServer)
-            } else {
-                handleConnectionFailure()
+            serviceHandler.post {
+                if (destroyed || karooSystem !== system) {
+                    return@post
+                }
+                if (connected) {
+                    DiagnosticEvents.record(TAG, "Connected to Karoo System")
+                    connectRetryCount = 0
+                    startOverlay(system, startServer)
+                } else {
+                    handleConnectionFailure(startServer)
+                }
             }
         }
     }
@@ -84,10 +103,20 @@ class OverlayService : Service() {
                 MainActivity.KEY_SHARE_LOCATION,
                 MainActivity.DEFAULT_SHARE_LOCATION,
             )
+            val subscribePower = prefs.getBoolean(
+                MainActivity.KEY_SUBSCRIBE_POWER,
+                MainActivity.DEFAULT_SUBSCRIBE_POWER,
+            )
+            val subscribeHeartRate = prefs.getBoolean(
+                MainActivity.KEY_SUBSCRIBE_HR,
+                MainActivity.DEFAULT_SUBSCRIBE_HR,
+            )
 
             val collector = MetricsCollector(
                 karooSystem = system,
                 shareLocation = shareLocation,
+                subscribePower = subscribePower,
+                subscribeHeartRate = subscribeHeartRate,
                 onReconnectRequested = ::requestKarooReconnect,
             )
             metricsCollector = collector
@@ -104,12 +133,14 @@ class OverlayService : Service() {
             isRunning = true
             lastError = null
             reconnectInProgress = false
+            connectRetryCount = 0
             updateNotification("Overlay running at $addr")
-            Log.i(TAG, "=== OBS Overlay available at: $addr ===")
+            DiagnosticEvents.record(TAG, "Overlay running at $addr")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start overlay server", e)
             lastError = "Server failed: ${e.message}"
             reconnectInProgress = false
+            DiagnosticEvents.recordWarning(TAG, "Failed to start overlay server: ${e.message}")
             updateNotification("Failed: ${e.message}")
             // Clean up partial state so a retry is possible
             metricsCollector?.stop()
@@ -125,54 +156,80 @@ class OverlayService : Service() {
     }
 
     override fun onDestroy() {
+        destroyed = true
+        serviceHandler.removeCallbacksAndMessages(null)
+        DiagnosticEvents.record(TAG, "Overlay service stopping")
         isRunning = false
         serverAddress = null
-        metricsCollector?.stop()
-        metricsCollector = null
-        try {
-            overlayServer?.stop()
-        } catch (e: Exception) {
-            Log.w(TAG, "Error stopping server", e)
-        }
-        overlayServer = null
-        karooSystem?.disconnect()
-        karooSystem = null
-        MetricsState.reset()
+        shutdownSession(stopServer = true, resetMetrics = true)
         clearForegroundNotification()
         super.onDestroy()
     }
 
-    private fun handleConnectionFailure() {
-        Log.w(TAG, "Failed to connect to Karoo System")
+    private fun handleConnectionFailure(startServer: Boolean) {
+        if (destroyed) return
+        karooSystem?.disconnect()
+        karooSystem = null
+
+        if (connectRetryCount < MAX_CONNECT_RETRIES) {
+            connectRetryCount += 1
+            reconnectInProgress = true
+            lastError = "Karoo connection failed, retrying"
+            updateNotification("Karoo reconnect ${connectRetryCount}/$MAX_CONNECT_RETRIES...")
+            DiagnosticEvents.recordWarning(
+                TAG,
+                "Failed to connect to Karoo System, retry ${connectRetryCount}/$MAX_CONNECT_RETRIES",
+            )
+            serviceHandler.postDelayed(
+                { beginKarooConnection(startServer) },
+                CONNECT_RETRY_DELAY_MS,
+            )
+            return
+        }
+
+        DiagnosticEvents.recordWarning(TAG, "Failed to connect to Karoo System after $MAX_CONNECT_RETRIES retries")
         reconnectInProgress = false
         lastError = "Karoo connection failed"
         serverAddress = null
         isRunning = false
-        karooSystem?.disconnect()
-        karooSystem = null
         updateNotification("Karoo connection failed")
         stopSelf()
     }
 
     private fun requestKarooReconnect(reason: String) {
         serviceHandler.post {
+            if (destroyed) return@post
             if (reconnectInProgress) {
                 Log.i(TAG, "Karoo reconnect already in progress, ignoring request: $reason")
                 return@post
             }
             reconnectInProgress = true
-            Log.w(TAG, "Reconnecting to Karoo System after metric stall: $reason")
+            connectRetryCount = 0
+            DiagnosticEvents.recordWarning(TAG, "Reconnecting to Karoo System after metric stall: $reason")
             updateNotification("Recovering metric stream...")
-
-            metricsCollector?.stop()
-            metricsCollector = null
-            MetricsState.reset()
-
-            karooSystem?.disconnect()
-            val system = KarooSystemService(this)
-            karooSystem = system
-            connectToKarooSystem(system, startServer = false)
+            shutdownSession(stopServer = true, resetMetrics = true)
+            beginKarooConnection(startServer = true)
         }
+    }
+
+    private fun shutdownSession(stopServer: Boolean, resetMetrics: Boolean) {
+        metricsCollector?.stop()
+        metricsCollector = null
+        if (stopServer) {
+            try {
+                overlayServer?.stop()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error stopping server", e)
+            }
+            overlayServer = null
+        }
+        karooSystem?.disconnect()
+        karooSystem = null
+        if (resetMetrics) {
+            MetricsState.reset()
+        }
+        isRunning = false
+        serverAddress = null
     }
 
     @Suppress("DEPRECATION")

@@ -94,24 +94,32 @@
   .overlay {
     position: absolute;
     inset: 0;
-    padding: 16px 12px 14px;
+    padding: 14px 10px 12px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 7px;
   }
 
   .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 7px;
+  }
+
+  .metrics-grid > .metric-card {
+    grid-column: span 2;
+  }
+
+  .metrics-grid > .metric-card:nth-child(-n+2) {
+    grid-column: span 3;
   }
 
   .metric-card {
     position: relative;
-    min-height: 76px;
-    padding: 10px 10px 9px;
-    border-radius: 16px;
+    min-height: 89px;
+    padding: 11px 11px 9px;
+    border-radius: 14px;
     background: var(--shell-bg);
     border: 1px solid var(--shell-border);
     backdrop-filter: blur(14px);
@@ -136,11 +144,10 @@
   .metric-card.grade::before { background: var(--climb); }
   .metric-card.speed::before { background: var(--speed); }
   .metric-card.distance::before { background: var(--distance); }
-  .metric-card.avg::before { background: rgba(255, 255, 255, 0.8); }
 
   .metric-label {
-    margin-bottom: 5px;
-    font-size: 8px;
+    margin-bottom: 6px;
+    font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.13em;
     text-transform: uppercase;
@@ -150,25 +157,25 @@
   .metric-main {
     display: flex;
     align-items: flex-end;
-    gap: 4px;
+    gap: 3px;
   }
 
   .metric-value {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 31px;
+    font-size: 32px;
     line-height: 0.88;
     letter-spacing: 0.02em;
   }
 
   .metric-unit {
-    padding-bottom: 3px;
+    padding-bottom: 4px;
     font-size: 10px;
     font-weight: 500;
     color: var(--text-soft);
   }
 
   .metric-sub {
-    margin-top: 6px;
+    margin-top: 7px;
     min-height: 14px;
     font-size: 9px;
     font-weight: 600;
@@ -178,8 +185,8 @@
   }
 
   .bar-track {
-    margin-top: 6px;
-    height: 3px;
+    margin-top: 7px;
+    height: 4px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
@@ -213,6 +220,7 @@
             </div>
             <div class="bar-track"><div class="bar-fill" style="width:85%; background: linear-gradient(90deg, #e8bb3d, #f7dc80);"></div></div>
             <div class="metric-sub">Z4 Threshold</div>
+            <div class="metric-sub">Avg 218 W</div>
           </article>
 
           <article class="metric-card hr">
@@ -225,15 +233,6 @@
             <div class="metric-sub">Z3 Tempo</div>
           </article>
 
-          <article class="metric-card grade">
-            <div class="metric-label">Grade</div>
-            <div class="metric-main">
-              <div class="metric-value">+4.2</div>
-              <div class="metric-unit">%</div>
-            </div>
-            <div class="metric-sub">Elev Gain 812 m</div>
-          </article>
-
           <article class="metric-card speed">
             <div class="metric-label">Speed</div>
             <div class="metric-main">
@@ -241,6 +240,24 @@
               <div class="metric-unit">km/h</div>
             </div>
             <div class="metric-sub">Avg 26.1 km/h</div>
+          </article>
+
+          <article class="metric-card distance">
+            <div class="metric-label">Distance</div>
+            <div class="metric-main">
+              <div class="metric-value">42.7</div>
+              <div class="metric-unit">km</div>
+            </div>
+            <div class="metric-sub"></div>
+          </article>
+
+          <article class="metric-card grade">
+            <div class="metric-label">Grade</div>
+            <div class="metric-main">
+              <div class="metric-value">+4.2</div>
+              <div class="metric-unit">%</div>
+            </div>
+            <div class="metric-sub">Elev Gain 812 m</div>
           </article>
 
         </div>

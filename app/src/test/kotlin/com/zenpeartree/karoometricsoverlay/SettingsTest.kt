@@ -32,11 +32,29 @@ class SettingsTest {
             "Location sharing key must be different from MAX_HR key",
             MainActivity.KEY_SHARE_LOCATION != MainActivity.KEY_MAX_HR,
         )
+        assertTrue(
+            "Power subscription key must be different from location sharing key",
+            MainActivity.KEY_SUBSCRIBE_POWER != MainActivity.KEY_SHARE_LOCATION,
+        )
+        assertTrue(
+            "HR subscription key must be different from location sharing key",
+            MainActivity.KEY_SUBSCRIBE_HR != MainActivity.KEY_SHARE_LOCATION,
+        )
+        assertTrue(
+            "Power and HR subscription keys must be different",
+            MainActivity.KEY_SUBSCRIBE_POWER != MainActivity.KEY_SUBSCRIBE_HR,
+        )
     }
 
     @Test
     fun `location sharing defaults to disabled`() {
         assertEquals(false, MainActivity.DEFAULT_SHARE_LOCATION)
+    }
+
+    @Test
+    fun `power and hr subscriptions default to enabled`() {
+        assertEquals(true, MainActivity.DEFAULT_SUBSCRIBE_POWER)
+        assertEquals(true, MainActivity.DEFAULT_SUBSCRIBE_HR)
     }
 
     @Test
@@ -63,6 +81,19 @@ class SettingsTest {
         assertTrue(
             "overlay.html default SHOW_MAP should be present for replacement",
             html.contains("var SHOW_MAP = false;"),
+        )
+    }
+
+    @Test
+    fun `overlay html defaults for optional metric tiles are present for replacement`() {
+        val html = java.io.File("src/main/assets/overlay.html").readText()
+        assertTrue(
+            "overlay.html default SHOW_POWER should be present for replacement",
+            html.contains("var SHOW_POWER = true;"),
+        )
+        assertTrue(
+            "overlay.html default SHOW_HR should be present for replacement",
+            html.contains("var SHOW_HR = true;"),
         )
     }
 }

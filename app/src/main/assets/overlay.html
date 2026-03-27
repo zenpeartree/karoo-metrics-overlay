@@ -41,31 +41,39 @@
   .overlay {
     position: fixed;
     inset: 0;
-    padding: 20px;
+    padding: 15px;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
-    gap: 20px;
+    gap: 10px;
     pointer-events: none;
   }
 
   .metrics-shell {
-    width: clamp(320px, 48vw, 468px);
+    width: clamp(240px, 36vw, 351px);
     display: grid;
-    gap: 10px;
+    gap: 7px;
   }
 
   .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 7px;
+  }
+
+  .metrics-grid > .metric-card {
+    grid-column: span 2;
+  }
+
+  .metrics-grid > .metric-card:nth-child(-n+2) {
+    grid-column: span 3;
   }
 
   .metric-card {
     position: relative;
-    min-height: 118px;
-    padding: 14px 14px 12px;
-    border-radius: 18px;
+    min-height: 89px;
+    padding: 11px 11px 9px;
+    border-radius: 14px;
     background: var(--shell-bg);
     border: 1px solid var(--shell-border);
     backdrop-filter: blur(14px);
@@ -90,11 +98,9 @@
   .metric-card.grade::before { background: var(--climb); }
   .metric-card.speed::before { background: #6fb8ff; }
   .metric-card.distance::before { background: #9e8bff; }
-  .metric-card.avg-power::before { background: rgba(255, 255, 255, 0.8); }
-
   .metric-label {
-    margin-bottom: 8px;
-    font-size: 10px;
+    margin-bottom: 6px;
+    font-size: 9px;
     font-weight: 600;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -104,12 +110,12 @@
   .metric-main {
     display: flex;
     align-items: flex-end;
-    gap: 4px;
+    gap: 3px;
   }
 
   .metric-value {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 42px;
+    font-size: 32px;
     line-height: 0.88;
     letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
@@ -121,25 +127,25 @@
   }
 
   .metric-unit {
-    padding-bottom: 5px;
-    font-size: 13px;
+    padding-bottom: 4px;
+    font-size: 10px;
     font-weight: 500;
     color: var(--text-soft);
   }
 
   .metric-sub {
-    margin-top: 10px;
-    min-height: 18px;
-    font-size: 11px;
+    margin-top: 7px;
+    min-height: 14px;
+    font-size: 9px;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--text-soft);
   }
 
   .bar-track {
-    margin-top: 10px;
-    height: 5px;
+    margin-top: 7px;
+    height: 4px;
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.08);
     overflow: hidden;
@@ -163,9 +169,9 @@
   .grade .metric-value.grade-flat { color: var(--neutral); }
 
   .map-panel {
-    width: clamp(220px, 28vw, 320px);
-    padding: 10px;
-    border-radius: 24px;
+    width: clamp(110px, 14vw, 160px);
+    padding: 6px;
+    border-radius: 16px;
     background: rgba(8, 12, 16, 0.44);
     border: 1px solid rgba(255, 255, 255, 0.07);
     backdrop-filter: blur(14px);
@@ -180,8 +186,8 @@
   .map-shell {
     position: relative;
     width: 100%;
-    height: 218px;
-    border-radius: 18px;
+    height: 109px;
+    border-radius: 12px;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
@@ -262,7 +268,7 @@
   <div class="overlay">
     <div class="metrics-shell">
       <div class="metrics-grid">
-        <div class="metric-card power">
+        <div class="metric-card power" id="power-card">
           <div class="metric-label">Power</div>
           <div class="metric-main">
             <div class="metric-value" id="power">--</div>
@@ -270,9 +276,10 @@
           </div>
           <div class="bar-track"><div class="bar-fill" id="power-bar"></div></div>
           <div class="metric-sub" id="power-zone"></div>
+          <div class="metric-sub" id="power-avg"></div>
         </div>
 
-        <div class="metric-card hr">
+        <div class="metric-card hr" id="hr-card">
           <div class="metric-label">Heart Rate</div>
           <div class="metric-main">
             <div class="metric-value" id="hr">--</div>
@@ -280,15 +287,6 @@
           </div>
           <div class="bar-track"><div class="bar-fill" id="hr-bar"></div></div>
           <div class="metric-sub" id="hr-zone"></div>
-        </div>
-
-        <div class="metric-card grade">
-          <div class="metric-label">Grade</div>
-          <div class="metric-main">
-            <div class="metric-value grade-flat" id="grade">--</div>
-            <div class="metric-unit">%</div>
-          </div>
-          <div class="metric-sub" id="elevGain">Elev Gain -- m</div>
         </div>
 
         <div class="metric-card speed">
@@ -309,14 +307,15 @@
           <div class="metric-sub"></div>
         </div>
 
-        <div class="metric-card avg-power">
-          <div class="metric-label">Avg Power</div>
+        <div class="metric-card grade">
+          <div class="metric-label">Grade</div>
           <div class="metric-main">
-            <div class="metric-value" id="avgPower">--</div>
-            <div class="metric-unit">W</div>
+            <div class="metric-value grade-flat" id="grade">--</div>
+            <div class="metric-unit">%</div>
           </div>
-          <div class="metric-sub"></div>
+          <div class="metric-sub" id="elevGain">Elev Gain -- m</div>
         </div>
+
       </div>
     </div>
 
@@ -335,6 +334,8 @@
   var FTP = 250;
   var MAX_HR = 187;
   var SHOW_MAP = false;
+  var SHOW_POWER = true;
+  var SHOW_HR = true;
   var MAX_TRAIL_POINTS = 250;
   var MAP_EDGE_PADDING = -0.35;
 
@@ -380,9 +381,11 @@
     dist: document.getElementById('dist'),
     grade: document.getElementById('grade'),
     elevGain: document.getElementById('elevGain'),
-    avgPower: document.getElementById('avgPower'),
+    powerCard: document.getElementById('power-card'),
+    hrCard: document.getElementById('hr-card'),
     powerBar: document.getElementById('power-bar'),
     powerZone: document.getElementById('power-zone'),
+    powerAvg: document.getElementById('power-avg'),
     hrBar: document.getElementById('hr-bar'),
     hrZone: document.getElementById('hr-zone'),
     status: document.getElementById('status'),
@@ -402,6 +405,16 @@
   if (!SHOW_MAP && els.mapPanel && els.mapPanel.parentNode) {
     els.mapPanel.parentNode.removeChild(els.mapPanel);
     els.mapPanel = null;
+  }
+
+  if (!SHOW_POWER) {
+    if (els.powerCard && els.powerCard.parentNode) {
+      els.powerCard.parentNode.removeChild(els.powerCard);
+    }
+  }
+
+  if (!SHOW_HR && els.hrCard && els.hrCard.parentNode) {
+    els.hrCard.parentNode.removeChild(els.hrCard);
   }
 
   function pulse(el) {
@@ -513,10 +526,20 @@
   function updateMetrics(data) {
     lastSnapshot = data;
     setMetricValue(els.speed, data.speed, 1);
-    setMetricValue(els.power, data.power, 0);
-    setMetricValue(els.hr, data.hr, 0);
+    if (SHOW_POWER) {
+      setMetricValue(els.power, data.power, 0);
+    }
+    if (SHOW_HR) {
+      setMetricValue(els.hr, data.hr, 0);
+    }
     setMetricValue(els.dist, data.dist, 1);
-    setMetricValue(els.avgPower, data.avgPower, 0);
+    if (SHOW_POWER) {
+      if (data.avgPower != null) {
+        setMetricSub(els.powerAvg, 'Avg ' + Math.round(data.avgPower) + ' W');
+      } else {
+        setMetricSub(els.powerAvg, 'Avg -- W');
+      }
+    }
 
     if (data.avgSpeed != null) {
       setMetricSub(els.avgSpeed, 'Avg ' + data.avgSpeed.toFixed(1) + ' km/h');
@@ -545,7 +568,7 @@
       els.grade.textContent = '--';
     }
 
-    if (data.power != null && data.power > 0) {
+    if (SHOW_POWER && data.power != null && data.power > 0) {
       var pz = getZone(data.power, FTP, powerZones);
       els.powerBar.style.width = getZoneFill(data.power, FTP, pz) + '%';
       els.powerBar.style.background = 'linear-gradient(90deg, ' + pz.color + ', rgba(255,255,255,0.95))';
@@ -560,7 +583,7 @@
       els.powerZone.style.color = '';
     }
 
-    if (data.hr != null && data.hr > 0) {
+    if (SHOW_HR && data.hr != null && data.hr > 0) {
       var hz = getZone(data.hr, MAX_HR, hrZones);
       els.hrBar.style.width = getZoneFill(data.hr, MAX_HR, hz) + '%';
       els.hrBar.style.background = 'linear-gradient(90deg, ' + hz.color + ', rgba(255,255,255,0.95))';
